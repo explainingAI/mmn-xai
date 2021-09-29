@@ -54,3 +54,40 @@ def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None
     heatmap = tf.maximum(heatmap, 0) / tf.math.reduce_max(heatmap)
 
     return heatmap.numpy()
+
+
+def occlusion_test(img, model, stride=1, size=3):
+    original_prop = model(img)[0]
+    # Getting the index of the winning class:
+    index_object = np.argmax(original_prop)
+    height, width, _ = img.shape
+
+    heatmap = np.zeros_like(img)
+
+    start_cx = np.arange(0, width, size * stride)
+    start_cy = np.arange(0, height, size * stride)
+    start_cx, start_cy = np.meshgrid(start_cx, start_cy)
+
+    box_widths, box_center_x = np.meshgrid(np.array([size]), start_cx)
+    box_heights, box_center_y = np.meshgrid(np.array([size]), start_cy)
+
+    box_start = np.stack([box_center_x, box_center_y], axis=2).reshape([-1, 2])
+    box_sizes = np.stack([box_widths, box_heights], axis=2).reshape([-1, 2])
+
+    box_end = box_start + box_sizes
+    boxes = np.concatenate([box_start, box_end], axis=1)
+
+    for box in boxes:
+        img_ocluded = np.copy(img)
+        img_ocluded[box[0]:box[2], box[1]:box[3], :] = 0
+
+        oclussion_prop = model(img_ocluded)[0]
+        oclussion_prop = (original_prop[index_object] - oclussion_prop[index_object]) / \
+                         original_prop[index_object]
+
+        heatmap[box[0]:box[2], box[1]:box[3], :] = oclussion_prop
+
+    heatmap *= 255
+    heatmap = heatmap.astype(np.uint8)
+
+    return heatmap
