@@ -56,13 +56,8 @@ def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None
     return heatmap.numpy()
 
 
-def occlusion_test(img, model, stride=1, size=3):
-    original_prop = model(img)[0]
-    # Getting the index of the winning class:
-    index_object = np.argmax(original_prop)
-    height, width, _ = img.shape
-
-    heatmap = np.zeros_like(img)
+def build_grid(stride, size, image_shape):
+    height, width, _ = image_shape
 
     start_cx = np.arange(0, width, size * stride)
     start_cy = np.arange(0, height, size * stride)
@@ -77,7 +72,18 @@ def occlusion_test(img, model, stride=1, size=3):
     box_end = box_start + box_sizes
     boxes = np.concatenate([box_start, box_end], axis=1)
 
-    for box in boxes:
+    return boxes
+
+
+def occlusion_test(img, model, occlusion_zones):
+    original_prop = model(img)[0]
+    # Getting the index of the winning class:
+    index_object = np.argmax(original_prop)
+    height, width, _ = img.shape
+
+    heatmap = np.zeros_like(img)
+
+    for box in occlusion_zones:
         img_ocluded = np.copy(img)
         img_ocluded[box[0]:box[2], box[1]:box[3], :] = 0
 
