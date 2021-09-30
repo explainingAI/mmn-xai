@@ -76,7 +76,7 @@ def build_grid(stride, size, image_shape):
 
 
 def occlusion_test(img, model, occlusion_zones):
-    original_prop = model(img)[0]
+    original_prop = model.predict(img)[0]
     # Getting the index of the winning class:
     index_object = np.argmax(original_prop)
     height, width, _ = img.shape
@@ -87,7 +87,7 @@ def occlusion_test(img, model, occlusion_zones):
         img_ocluded = np.copy(img)
         img_ocluded[box[0]:box[2], box[1]:box[3], :] = 0
 
-        oclussion_prop = model(img_ocluded)[0]
+        oclussion_prop = model.predict(img_ocluded)[0]
         oclussion_prop = (original_prop[index_object] - oclussion_prop[index_object]) / \
                          original_prop[index_object]
 
