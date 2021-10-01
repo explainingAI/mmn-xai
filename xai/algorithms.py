@@ -75,24 +75,43 @@ def build_grid(stride, size, image_shape):
     return boxes
 
 
+def print_bboxes(bboxes, shape):
+    bboxes_img = np.zeros(shape)
+    for idx, bb in enumerate(bboxes):
+        bboxes_img[bb[0]: bb[2], bb[1]:bb[3]] = idx + 1
+
+    return bboxes_img
+
+
 def occlusion_test(batch_img, model, occlusion_zones):
+    batch_img = np.copy(batch_img.reshape((1, 224, 224, 3)))
     original_prop = model.predict(batch_img)[0]
+
     # Getting the index of the winning class:
     index_object = np.argmax(original_prop)
     _, height, width, _ = batch_img.shape
 
-    heatmap = np.zeros_like((batch_img.shape[0], batch_img.shape[1], batch_img.shape[2]))
+    heatmap = np.zeros((batch_img.shape[0], batch_img.shape[1], batch_img.shape[2]),
+                       dtype=np.float64)
 
-    for box in occlusion_zones:
+    for u_val in np.unique(occlusion_zones):
+        mask = occlusion_zones == u_val
+
         img_ocluded = np.copy(batch_img)
-        img_ocluded[0, box[0]:box[2], box[1]:box[3], :] = 0
+
+        img_ocluded[:, :, 0][mask] = 0
+        img_ocluded[:, :, 1][mask] = 0
+        img_ocluded[:, :, 2][mask] = 0
 
         oclussion_prop = model.predict(img_ocluded)[0]
         oclussion_prop = (original_prop[index_object] - oclussion_prop[index_object]) / \
                          original_prop[index_object]
 
-        heatmap[box[0]:box[2], box[1]:box[3], :] = oclussion_prop
+        heatmap[:, :, 0][mask] = oclussion_prop
+        heatmap[:, :, 1][mask] = oclussion_prop
+        heatmap[:, :, 2][mask] = oclussion_prop
 
+    heatmap /= heatmap.max()
     heatmap *= 255
     heatmap = heatmap.astype(np.uint8)
 
