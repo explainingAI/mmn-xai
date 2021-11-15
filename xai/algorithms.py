@@ -1,10 +1,21 @@
 # -*- coding: utf-8 -*-
+""" Module containing a set of XAI algorithms.
+
+Explainable Artificial Intelligence (XAI) is a collection of algorithm aiming to open black-box
+models (as neural networks) and expose them to be explainable. In this module we provide a set
+of methods:
+    GradCAM
+    LIME
+    Occlusion test
+
+Writen by: Miquel Miró Nicolau (UIB)
+"""
 import numpy as np
 import tensorflow as tf
 
 
 def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None) -> np.ndarray:
-    """
+    """ GradCAM implementation.
 
     Gradient-weighted Class Activation Mapping (Grad-CAM), uses the class-specific gradient
     information flowing into the final convolutional layer of a CNN to produce a coarse localization
@@ -12,6 +23,9 @@ def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None
     Activation Mapping. Unlike CAM, Grad-CAM requires no re-training and is broadly applicable to
     any CNN-based architectures.
 
+    Proposed by:
+        F. Chollet. Grad-CAM: Visual Explanations from Deep Networks via Gradient-based
+            Localization.
     Args:
         img_array:
         model:
@@ -76,6 +90,15 @@ def build_grid(stride, size, image_shape):
 
 
 def print_bboxes(bboxes, shape):
+    """ Draw bounding boxes on an image.
+
+    Args:
+        bboxes: List of bounding boxes in the form [x1, y1, x2, y2].
+        shape: Tuple containing the image shape.
+
+    Returns:
+        Image with bounding boxes drawn on it.
+    """
     bboxes_img = np.zeros(shape)
     for idx, bb in enumerate(bboxes):
         bboxes_img[bb[0]: bb[2], bb[1]:bb[3]] = idx + 1
@@ -83,29 +106,49 @@ def print_bboxes(bboxes, shape):
     return bboxes_img
 
 
-def occlusion_test(batch_img, model, occlusion_zones):
-    batch_img = np.copy(batch_img.reshape((1, 224, 224, 3)))
+def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
+    """ Occlusion test for a batch of images.
+
+    The occlusion test is a simple way to test the robustness of the model to occlusion. Occlusion
+    in the context of computer vision is the loss of information in an image by removing a part, in
+    this case we substitute the part of the image with a box with the intermediate value passed as
+    parameter.
+
+    Args:
+        batch_img: NumPy array with the batch of images to test.
+        model: Model, with a predict method to be tested against the occlusion.
+        occlusion_zones:
+        intermediate_value:
+
+    Returns:
+
+    """
+    image_shape = batch_img.shape
+
+    batch_img = np.copy(batch_img.reshape((1, image_shape[1], image_shape[2], image_shape[3])))
     original_prop = model.predict(batch_img)[0]
 
     # Getting the index of the winning class:
     index_object = np.argmax(original_prop)
     _, height, width, _ = batch_img.shape
 
-    heatmap = np.zeros((batch_img.shape[0], batch_img.shape[1], batch_img.shape[2]),
+    heatmap = np.zeros((batch_img.shape[1], batch_img.shape[2], batch_img.shape[3]),
                        dtype=np.float64)
+
+    if intermediate_value is None:
+        intermediate_value = (batch_img.max() - batch_img.min()) / 2
 
     for u_val in np.unique(occlusion_zones):
         mask = occlusion_zones == u_val
 
         img_ocluded = np.copy(batch_img)
 
-        img_ocluded[:, :, 0][mask] = 0
-        img_ocluded[:, :, 1][mask] = 0
-        img_ocluded[:, :, 2][mask] = 0
+        img_ocluded[0, :, :, 0][mask] = intermediate_value
+        img_ocluded[0, :, :, 1][mask] = intermediate_value
+        img_ocluded[0, :, :, 2][mask] = intermediate_value
 
         oclussion_prop = model.predict(img_ocluded)[0]
-        oclussion_prop = (original_prop[index_object] - oclussion_prop[index_object]) / \
-                         original_prop[index_object]
+        oclussion_prop = (original_prop[index_object] - oclussion_prop[index_object])
 
         heatmap[:, :, 0][mask] = oclussion_prop
         heatmap[:, :, 1][mask] = oclussion_prop
