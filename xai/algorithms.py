@@ -5,6 +5,7 @@ Explainable Artificial Intelligence (XAI) is a collection of algorithm aiming to
 models (as neural networks) and expose them to be explainable. In this module we provide a set
 of methods:
     GradCAM
+    Grad-CAM++
     LIME
     Occlusion test
 
@@ -23,17 +24,17 @@ def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None
     Activation Mapping. Unlike CAM, Grad-CAM requires no re-training and is broadly applicable to
     any CNN-based architectures.
 
-    Proposed by:
+    Implemented by:
         F. Chollet. Grad-CAM: Visual Explanations from Deep Networks via Gradient-based
             Localization.
     Args:
-        img_array:
-        model:
-        last_conv_layer_name:
-        pred_index:
+        img_array: Numpy array containing the image.
+        model: Keras model.
+        last_conv_layer_name: String containing the name of the last convolutional layer.
+        pred_index: Index of the class to be used for the prediction.
 
     Returns:
-        heatmap
+        Numpy array containing the image with the heatmap.
     """
     # First, we create a model that maps the input image to the activations of the last conv layer
     # as well as the output predictions
@@ -121,7 +122,7 @@ def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
         intermediate_value:
 
     Returns:
-
+        Numpy array containing the image with the heatmap.
     """
     image_shape = batch_img.shape
 
@@ -157,5 +158,71 @@ def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
     heatmap /= heatmap.max()
     heatmap *= 255
     heatmap = heatmap.astype(np.uint8)
+
+    return heatmap
+
+
+def grad_cam_plus(model, img, layer_name, label_name=None, category_id=None):
+    """ Get a heatmap by Grad-CAM++.
+
+    Grad-CAM++ that can provide better visual explanations of CNN model predictions, in terms of
+    better object localization as well as explaining occurrences of multiple object instances in a
+    single image, when compared to state-of-the-art.
+
+    Refs:
+        https://arxiv.org/abs/1710.11063
+
+    Implemented by:
+        Samson Woof, https://github.com/samson6460/tf_keras_gradcamplusplus
+
+    Args:
+        model: A model object, build from tf.keras 2.X.
+        img: Numpy array with the image to be processed.
+        layer_name: String with the name of the layer to be used.
+        label_name: A list or None, show the label name by assign this argument, it should be a list
+                    of all label names.
+        category_id: An integer, index of the class. Default is the category with the highest score
+                    in the prediction.
+    Return:
+        Numpy array containing the image with the heatmap.
+    """
+    img_tensor = np.expand_dims(img, axis=0)
+
+    conv_layer = model.get_layer(layer_name)
+    heatmap_model = tf.keras.models.Model([model.inputs], [conv_layer.output, model.output])
+
+    with tf.GradientTape() as gradient_tape1:
+        with tf.GradientTape() as gradient_tape2:
+            with tf.GradientTape() as gradient_tape3:
+                conv_output, predictions = heatmap_model(img_tensor)
+                if category_id is None:
+                    category_id = np.argmax(predictions[0])
+                if label_name:
+                    print(label_name[category_id])
+                output = predictions[:, category_id]
+                conv_first_grad = gradient_tape3.gradient(output, conv_output)
+            conv_second_grad = gradient_tape2.gradient(conv_first_grad, conv_output)
+        conv_third_grad = gradient_tape1.gradient(conv_second_grad, conv_output)
+
+    global_sum = np.sum(conv_output, axis=(0, 1, 2))
+
+    alpha_num = conv_second_grad[0]
+    alpha_denominator = conv_second_grad[0] * 2.0 + conv_third_grad[0] * global_sum
+    alpha_denominator = np.where(alpha_denominator != 0.0, alpha_denominator, 1e-10)
+
+    alphas = alpha_num / alpha_denominator
+    alpha_normalization_constant = np.sum(alphas, axis=(0, 1))
+    alphas /= alpha_normalization_constant
+
+    weights = np.maximum(conv_first_grad[0], 0.0)
+
+    deep_linearization_weights = np.sum(weights * alphas, axis=(0, 1))
+    grad_cam_map = np.sum(deep_linearization_weights * conv_output[0], axis=2)
+
+    heatmap = np.maximum(grad_cam_map, 0)
+    max_heat = np.max(heatmap)
+    if max_heat == 0:
+        max_heat = 1e-10
+    heatmap /= max_heat
 
     return heatmap
