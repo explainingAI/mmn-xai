@@ -29,83 +29,12 @@ Authors:
 
 Writen by: Miquel Miró Nicolau (UIB)
 """
-from typing import List, Union, Callable
+import torch
 
-import numpy as np
-
-
-def __get_regions(saliency_map, region_shape, reverse: bool = False):
-    """ Get the regions of the saliency map that will be perturbed
-
-    The regions are obtained by sliding the region_shape over the saliency map. Then are sorted
-    by the addition of the saliency map values in the region.
-
-    Args:
-        saliency_map: 2D Numpy array with the saliency map.
-        region_shape: Tuple with the shape of the region.
-        reverse: Boolean that indicates if the regions should be sorted in descending order.
-
-    Returns:
-        List of tuples with the regions.
-    """
-
-    def __get_region_value(region, sal_map, reg_shape):
-        """ Auxiliary function to sort the regions by their saliency map value.
-
-        Args:
-            region: Tuple, with the start and end points of the region.
-            sal_map: 2D Numpy array with the saliency map.
-            reg_shape: Tuple with the shape of the region.
-
-        Returns:
-            The saliency map value of the region.
-        """
-        return np.sum(
-            sal_map[region[0]: region[0] + reg_shape[0], region[1]: region[1] + reg_shape[1]])
-
-    regions = []
-
-    for horizontal_split in range(0, saliency_map.shape[0], region_shape[0]):
-        for vertical_split in range(0, saliency_map.shape[1], region_shape[1]):
-            regions.append((horizontal_split, vertical_split))
-
-    regions = sorted(regions, key=lambda x: __get_region_value(x, saliency_map, region_shape),
-                     reverse=reverse)
-
-    return regions
+from . import utils
 
 
-def __perturb_img(img, region, region_size, perturbation_value: Union[Callable, int]):
-    """ Perturb the image in the given region with the given value
-
-    The perturbation value can be a function that returns the value to be perturbed or a
-    constant value. In both cases, the value is set equally in all the pixels in the region.
-
-    Args:
-        img: 2D or 3D Numpy array with the image.
-        region: Sub-region of the image to be perturbed.
-        region_size: Tuple with the size of the region.
-        perturbation_value: Value to be perturbed in the region. Function or constant.
-
-    Returns:
-        The perturbed image.
-    """
-    if callable(perturbation_value):
-        perturbation_value = perturbation_value()
-
-    img_copy = np.copy(img)
-
-    if len(img_copy.shape) > 2:
-        img_copy[region[0]: region[0] + region_size[0],
-                 region[1]: region[1] + region_size[1], :] = perturbation_value
-    else:
-        img_copy[region[0]: region[0] + region_size[0],
-                 region[1]: region[1] + region_size[1]] = perturbation_value
-    return img_copy
-
-
-def aopc(dataset: List[np.ndarray], saliency_maps: List[np.ndarray], prediction_func, region_shape,
-         value, reverse: bool = False):
+def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: bool = False):
     """ Approximate Optimal Perturbation Criterion.
 
     The AOPC metric is a measure of the quality of the adversarial perturbation. The metric is
@@ -131,14 +60,14 @@ def aopc(dataset: List[np.ndarray], saliency_maps: List[np.ndarray], prediction_
     regions = []
     for img, sal_map in zip(dataset, saliency_maps):
         original_prediction = prediction_func(img)
-        original_id = np.argmax(original_prediction)  # llevar
+        original_id = torch.argmax(original_prediction)  # llevar
 
-        img_perturbed = np.copy(img)
-        regions = __get_regions(sal_map, region_shape=region_shape, reverse=reverse)
+        img_perturbed = torch.clone(img)
+        regions, _ = utils.get_regions(sal_map, region_shape=region_shape, reverse=reverse)
 
         for reg in regions:
-            img_perturbed = __perturb_img(img_perturbed, reg, region_shape,
-                                          perturbation_value=value)
+            img_perturbed = utils.perturb_img(img_perturbed, reg, region_shape,
+                                              perturbation_value=value)
 
             perturbed_prediction = prediction_func(img_perturbed)
             aopc_value += (original_prediction[original_id] - perturbed_prediction[original_id])
