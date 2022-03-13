@@ -14,6 +14,7 @@ from typing import Union
 
 from scipy import stats
 import numpy as np
+import torch
 
 from . import utils
 
@@ -31,10 +32,10 @@ def faithfullness(img, saliency_map, prediction_func, region_shape, value) -> Un
     Returns:
         The calculated faithfullness metric.
     """
-    regions, regions_values = utils.get_regions(saliency_map, region_shape)
+    regions, regions_values = utils.get_regions(saliency_map.numpy(), region_shape)
 
     original_prediction = prediction_func(img)
-    original_idx = np.argmax(original_prediction)
+    original_idx = torch.argmax(original_prediction)
     perturb_preds = []
 
     perturbed_img = img
@@ -43,9 +44,10 @@ def faithfullness(img, saliency_map, prediction_func, region_shape, value) -> Un
         prediction_pert = prediction_func(perturbed_img)
 
         perturb_preds.append(
-            original_prediction[original_idx] - prediction_pert[original_idx])
+            (original_prediction[original_idx] - prediction_pert[original_idx]).numpy())
 
     regions_values, perturb_preds = np.array(regions_values), np.array(perturb_preds)
+    perturb_preds = np.squeeze(perturb_preds)
     regions_values = utils.normalize_zero_one(regions_values)
     perturb_preds = utils.normalize_zero_one(perturb_preds)
 

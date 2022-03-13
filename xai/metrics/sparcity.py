@@ -14,10 +14,14 @@ Written by: Miquel Miró Nicolau (UIB)
 """
 import numpy as np
 
+from . import utils
+
 
 def sparcity(saliency_map: np.ndarray):
-    sal_map_n = np.copy(saliency_map)
+    sal_map_n = utils.normalize_zero_one(saliency_map)
 
-    sal_map_n = (sal_map_n - sal_map_n.min()) / (sal_map_n.max() - sal_map_n.min())
+    mean = np.mean(sal_map_n)
 
-    return 1 / np.mean(sal_map_n)
+    sparc = 1 / mean if mean > 0 else mean
+
+    return sparc

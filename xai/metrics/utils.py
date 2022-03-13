@@ -5,6 +5,7 @@ Written by: Miquel Miró Nicolau (UIB)
 """
 
 from typing import Union, Callable
+import copy
 
 import numpy as np
 import torch
@@ -19,9 +20,10 @@ def normalize_zero_one(data):
     Returns:
         Numpy array with the normalized data.
     """
-    data_normalized = np.copy(data)
-    data_normalized = (data_normalized - data_normalized.min()) / \
-                      (data_normalized.max() - data_normalized.min())
+    data_normalized = copy.copy(data)
+    if (data.min() != 0 or data.max() != 1) and (data.min() != data.max()):
+        data_normalized = (data_normalized - data_normalized.min()) / \
+                          (data_normalized.max() - data_normalized.min())
 
     return data_normalized
 
@@ -53,7 +55,7 @@ def get_regions(saliency_map, region_shape, reverse: bool = False):
 
     regions = sorted(zip(regions, regions_values), key=lambda x: x[1], reverse=reverse)
 
-    return zip(*regions)
+    return tuple(zip(*regions))
 
 
 def perturb_img(img, region, region_size, perturbation_value: Union[Callable, int]):
