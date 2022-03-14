@@ -7,7 +7,7 @@ Abstract of the original paper:
     nonlinear structure, they are not transparent, i.e., it is hard to grasp what makes them arrive
     at a particular classification or recognition decision, given a new unseen data sample.
     Recently, several approaches have been proposed enabling one to understand and interpret the
-    reasoning embodied in a DNN for a single test image. These methods quantify the “importance” of
+    reasoning embodied in a DNN for a single test image. These methods quantify the "importance" of
     individual pixels with respect to the classification decision and allow a visualization in terms
     of a heatmap in pixel/input space. While the usefulness of heatmaps can be judged subjectively
     by a human, an objective quality measure is missing. In this paper, we present a general
