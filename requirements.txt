@@ -1,5 +1,4 @@
 numpy==1.21.5
 scipy==1.7.3
-setuptools==52.0.0.post20210125
 torch==1.10.0
 torchvision==0.11.1
