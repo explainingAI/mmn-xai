@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import torch
 
-from xai.methods import sidu
+from uib_xai.methods import sidu
 
 
 class Layer:
@@ -39,7 +39,7 @@ class TestSIDU(unittest.TestCase):
         model = TestModel(weights)
 
         image = torch.zeros((50, 50, 3))
-        importance = sidu.sidu(model, layer_idx=0, image=image)
+        importance = sidu.sidu(model, Layer(weights), image=image)
 
         self.assertAlmostEqual(np.count_nonzero(importance), 0)
 
@@ -48,6 +48,6 @@ class TestSIDU(unittest.TestCase):
         model = TestModel(weights)
 
         image = torch.zeros((50, 50))
-        importance = sidu.sidu(model, layer_idx=0, image=image)
+        importance = sidu.sidu(model, Layer(weights), image=image)
 
         self.assertAlmostEqual(np.count_nonzero(importance), 0)

@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-from xai.metrics import sparcity
+from uib_xai.metrics import sparcity
 
 
 class TestSparcity(unittest.TestCase):

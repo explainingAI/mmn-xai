@@ -17,7 +17,7 @@ Abstract:
 
 References:
     Muddamsetty, S. M., Jahromi, M. N., Ciontos, A. E., Fenoy, L. M., & Moeslund, T. B. (2021).
-    Introducing and assessing the explainable ai (xai) method: Sidu. arXiv preprint
+    Introducing and assessing the explainable ai (uib_xai) method: Sidu. arXiv preprint
     arXiv:2101.10710.
 
 """
@@ -110,8 +110,7 @@ def uniqueness(model, feature_activation_masks):
     return uniqueness_score
 
 
-def sidu(model, layer_idx: int, image: Union[np.ndarray, torch.Tensor]):
-    layer = model[layer_idx]
+def sidu(model, layer, image: Union[np.ndarray, torch.Tensor]):
     layer_weights = layer.weights
 
     feature_activation_masks, image_features = get_feature_activations_masks(layer_weights, image)

@@ -6,7 +6,7 @@ import unittest
 
 import torch
 
-from xai.metrics import faithfullness
+from uib_xai.metrics import faithfullness
 
 
 class TestFaithfullness(unittest.TestCase):
