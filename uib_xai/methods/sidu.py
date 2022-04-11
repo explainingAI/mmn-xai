@@ -29,37 +29,41 @@ import cv2
 import torch
 
 
-def get_feature_activations_masks(layer_weights, image: torch.Tensor,
+def get_feature_activations_masks(conv_output, image: torch.Tensor,
                                   weights_thresh: Union[int, float, None] = None):
     """
 
     Args:
-        layer_weights:
+        conv_output:
         image:
         weights_thresh:
 
     Returns:
 
     """
+    conv_output_np = conv_output.cpu().detach().numpy()
+    conv_output_np = conv_output_np.reshape(-1, conv_output_np.shape[-2],
+                                                conv_output_np.shape[-1])
+
     feature_activation_masks = []
     image_features = []
-    for i in range(layer_weights.shape[-1]):
-        mask_w = layer_weights[:, :, i].cpu().numpy()
+    for i in range(conv_output_np.shape[0]):
+        mask_w = conv_output_np[i, :, :]
 
         if weights_thresh is None:
             weights_thresh = np.quantile(mask_w, 0.5)
 
         mask_w = mask_w > weights_thresh
         mask_w = mask_w.astype(np.float32)
-        mask_w = cv2.resize(mask_w, image.shape[:2], interpolation=cv2.INTER_LINEAR)
+        mask_w = cv2.resize(mask_w, image.cpu().numpy().shape[-2:], interpolation=cv2.INTER_LINEAR)
 
-        feature_activation_masks.append(mask_w)
+        feature_activation_masks.append(torch.tensor(mask_w))
         if len(image.shape) > 2:
-            img_feat = image.cpu().numpy() * np.repeat(mask_w[:, :, np.newaxis], 3, axis=2)
+            img_feat = image.cpu().numpy() * np.repeat(mask_w[np.newaxis, :, :], 3, axis=0)
         else:
             img_feat = image.cpu().numpy() * mask_w
 
-        image_features.append(img_feat)
+        image_features.append(torch.tensor(img_feat))
 
     return feature_activation_masks, image_features
 
@@ -81,7 +85,7 @@ def similarity_difference(model, org_img, feature_activation_masks, sigma):
     predictions = [model(fam) for fam in feature_activation_masks]
     pred_diffs = [(p_org - pi) for pi in predictions]
 
-    similarity_diff = np.array([np.linalg.norm(pi.cpu().numpy()) for pi in pred_diffs])
+    similarity_diff = np.array([np.linalg.norm(pi.cpu().detach().numpy()) for pi in pred_diffs])
     similarity_diff = np.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
 
     return similarity_diff
@@ -97,7 +101,7 @@ def uniqueness(model, feature_activation_masks):
     Returns:
 
     """
-    predictions = [model(fam).cpu().numpy() for fam in feature_activation_masks]
+    predictions = [model(fam).cpu().detach().numpy() for fam in feature_activation_masks]
     uniqueness_score = []
 
     for i in range(len(predictions)):
@@ -110,10 +114,8 @@ def uniqueness(model, feature_activation_masks):
     return uniqueness_score
 
 
-def sidu(model, layer, image: Union[np.ndarray, torch.Tensor]):
-    layer_weights = layer.weights
-
-    feature_activation_masks, image_features = get_feature_activations_masks(layer_weights, image)
+def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
+    feature_activation_masks, image_features = get_feature_activations_masks(layer_output, image)
 
     sd_score = similarity_difference(model, image, image_features, sigma=0.25)
     u_score = uniqueness(model, image_features)
