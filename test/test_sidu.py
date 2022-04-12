@@ -41,8 +41,8 @@ class ModelTest:
     def __init__(self, weights):
         self.__layer = Layer(weights)
 
-    def __call__(self, *args, **kwargs):
-        return torch.ones((1, 2))
+    def __call__(self, data, *args, **kwargs):
+        return torch.ones((data.shape[0], 2))
 
     def __getitem__(self, item):
         return self.__layer

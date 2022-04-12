@@ -24,13 +24,13 @@ References:
 from typing import Union
 
 import numpy as np
-import cv2
 
 import torch
+from torch import nn
 
 
 def get_feature_activations_masks(conv_output, image: torch.Tensor,
-                                  weights_thresh: Union[int, float, None] = None):
+                                  weights_thresh: Union[int, float, None] = 0.1):
     """
 
     Args:
@@ -41,29 +41,22 @@ def get_feature_activations_masks(conv_output, image: torch.Tensor,
     Returns:
 
     """
-    conv_output_np = conv_output.cpu().detach().numpy()
-    conv_output_np = conv_output_np.reshape(-1, conv_output_np.shape[-2],
-                                                conv_output_np.shape[-1])
+    mask_w = conv_output
 
-    feature_activation_masks = []
-    image_features = []
-    for i in range(conv_output_np.shape[0]):
-        mask_w = conv_output_np[i, :, :]
+    mask_w = mask_w > weights_thresh
+    mask_w = mask_w.double()
+    resize = nn.Upsample(tuple(image.shape[-2:]), mode='bilinear')
+    mask_w = resize(mask_w)
 
-        if weights_thresh is None:
-            weights_thresh = np.quantile(mask_w, 0.5)
+    feature_activation_masks = mask_w
 
-        mask_w = mask_w > weights_thresh
-        mask_w = mask_w.astype(np.float32)
-        mask_w = cv2.resize(mask_w, image.cpu().numpy().shape[-2:], interpolation=cv2.INTER_LINEAR)
+    # Batch, Filters, Channels, Width, Height
+    image = image.reshape((image.shape[0], 1, image.shape[1], image.shape[2], image.shape[3]))
+    mask_w = mask_w.reshape((mask_w.shape[0], mask_w.shape[1], 1, mask_w.shape[2], mask_w.shape[3]))
+    image = image.repeat((1, mask_w.shape[1], 1, 1, 1))
+    mask_w = mask_w.repeat((1, 1, image.shape[2], 1, 1))
 
-        feature_activation_masks.append(torch.tensor(mask_w))
-        if len(image.shape) > 2:
-            img_feat = image.cpu().numpy() * np.repeat(mask_w[np.newaxis, :, :], 3, axis=0)
-        else:
-            img_feat = image.cpu().numpy() * mask_w
-
-        image_features.append(torch.tensor(img_feat))
+    image_features = image * mask_w
 
     return feature_activation_masks, image_features
 
@@ -81,12 +74,11 @@ def similarity_difference(model, org_img, feature_activation_masks, sigma):
 
     """
     p_org = model(org_img)
+    predictions = model(torch.squeeze(feature_activation_masks))
+    pred_diffs = predictions - p_org
 
-    predictions = [model(fam) for fam in feature_activation_masks]
-    pred_diffs = [(p_org - pi) for pi in predictions]
-
-    similarity_diff = np.array([np.linalg.norm(pi.cpu().detach().numpy()) for pi in pred_diffs])
-    similarity_diff = np.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
+    similarity_diff = torch.norm(pred_diffs, dim=1)
+    similarity_diff = torch.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
 
     return similarity_diff
 
@@ -101,17 +93,17 @@ def uniqueness(model, feature_activation_masks):
     Returns:
 
     """
-    predictions = [model(fam).cpu().detach().numpy() for fam in feature_activation_masks]
+    predictions = model(torch.squeeze(feature_activation_masks))
     uniqueness_score = []
 
     for i in range(len(predictions)):
         i_uniq = 0
         for j in range(len(predictions)):
             if i != j:
-                i_uniq += np.linalg.norm(predictions[i] - predictions[j])
+                i_uniq += torch.norm(predictions[i, :] - predictions[j, :])
         uniqueness_score.append(i_uniq)
 
-    return uniqueness_score
+    return torch.Tensor(uniqueness_score)
 
 
 def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
@@ -120,9 +112,9 @@ def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
     sd_score = similarity_difference(model, image, image_features, sigma=0.25)
     u_score = uniqueness(model, image_features)
 
-    weights = np.array([np.dot(sd_i, u_i) for sd_i, u_i in zip(sd_score, u_score)])
-    weighted_fams = [fam * w for fam, w in zip(feature_activation_masks, weights)]
+    weights = [(sd_i * u_i) for sd_i, u_i in zip(sd_score, u_score)]
+    weighted_fams = [fam * w for fam, w in zip(torch.squeeze(feature_activation_masks), weights)]
 
-    explanation = np.sum(weighted_fams, axis=0)
+    explanation = torch.sum(torch.stack(weighted_fams), axis=0)
 
     return explanation
