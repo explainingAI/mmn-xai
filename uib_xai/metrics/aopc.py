@@ -30,6 +30,7 @@ Authors:
 Writen by: Miquel Miró Nicolau (UIB)
 """
 import torch
+import numpy as np
 
 from . import utils
 
@@ -59,17 +60,18 @@ def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: 
     aopc_value = 0
     regions = []
     for img, sal_map in zip(dataset, saliency_maps):
-        original_prediction = prediction_func(img)
-        original_id = torch.argmax(original_prediction)  # llevar
+        original_prediction = prediction_func(img).cpu().detach().numpy()
+        original_id = np.argmax(original_prediction)  # llevar
 
-        img_perturbed = torch.clone(img)
+        img_perturbed = torch.clone(img.detach())
         regions, _ = utils.get_regions(sal_map, region_shape=region_shape, reverse=reverse)
 
         for reg in regions:
+            torch.cuda.empty_cache()
             img_perturbed = utils.perturb_img(img_perturbed, reg, region_shape,
                                               perturbation_value=value)
 
-            perturbed_prediction = prediction_func(img_perturbed)
+            perturbed_prediction = prediction_func(img_perturbed).cpu().detach().numpy()
             aopc_value += (original_prediction[original_id] - perturbed_prediction[original_id])
 
     if len(regions) < 0:

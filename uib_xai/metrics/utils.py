@@ -58,7 +58,7 @@ def get_regions(saliency_map, region_shape, reverse: bool = False):
     return tuple(zip(*regions))
 
 
-def perturb_img(img, region, region_size, perturbation_value: Union[Callable, int]):
+def perturb_img(img, region, region_size, perturbation_value):
     """ Perturb the image in the given region with the given value
 
     The perturbation value can be a function that returns the value to be perturbed or a
@@ -76,12 +76,12 @@ def perturb_img(img, region, region_size, perturbation_value: Union[Callable, in
     if callable(perturbation_value):
         perturbation_value = perturbation_value()
 
-    img_copy = torch.clone(img)
+    img_copy = torch.clone(img.detach())
 
-    if len(img_copy.shape) > 2:
-        img_copy[region[0]: region[0] + region_size[0],
-        region[1]: region[1] + region_size[1], :] = perturbation_value
+    if len(img_copy.shape) > 3:
+        img_copy[:, :, region[0]: region[0] + region_size[0],
+                 region[1]: region[1] + region_size[1]] = perturbation_value
     else:
-        img_copy[region[0]: region[0] + region_size[0],
-        region[1]: region[1] + region_size[1]] = perturbation_value
+        img_copy[:, region[0]: region[0] + region_size[0],
+                 region[1]: region[1] + region_size[1]] = perturbation_value
     return img_copy
