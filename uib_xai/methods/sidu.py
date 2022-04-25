@@ -28,6 +28,8 @@ import numpy as np
 import torch
 from torch import nn
 
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+
 
 def get_feature_activations_masks(conv_output, image: torch.Tensor,
                                   weights_thresh: Union[int, float, None] = 0.1):
@@ -44,8 +46,8 @@ def get_feature_activations_masks(conv_output, image: torch.Tensor,
     mask_w = conv_output
 
     mask_w = mask_w > weights_thresh
-    mask_w = mask_w.double()
-    resize = nn.Upsample(tuple(image.shape[-2:]), mode='bilinear')
+    mask_w = mask_w.type(torch.FloatTensor)
+    resize = nn.Upsample(tuple(image.shape[-2:]), mode='bilinear', align_corners=False)
     mask_w = resize(mask_w)
 
     feature_activation_masks = mask_w
@@ -55,6 +57,8 @@ def get_feature_activations_masks(conv_output, image: torch.Tensor,
     mask_w = mask_w.reshape((mask_w.shape[0], mask_w.shape[1], 1, mask_w.shape[2], mask_w.shape[3]))
     image = image.repeat((1, mask_w.shape[1], 1, 1, 1))
     mask_w = mask_w.repeat((1, 1, image.shape[2], 1, 1))
+
+    mask_w = mask_w.to(DEVICE)
 
     image_features = image * mask_w
 
@@ -74,13 +78,16 @@ def similarity_difference(model, org_img, feature_activation_masks, sigma):
 
     """
     p_org = model(org_img)
-    predictions = model(torch.squeeze(feature_activation_masks))
-    pred_diffs = predictions - p_org
+    pred_diffs = []
+    for fam in torch.squeeze(feature_activation_masks):
+        prediction = model(torch.unsqueeze(fam, 0))
+        pred_diffs.append(prediction - p_org)
 
-    similarity_diff = torch.norm(pred_diffs, dim=1)
+    pred_diffs = torch.stack(pred_diffs)
+    similarity_diff = torch.norm(pred_diffs, dim=2)
     similarity_diff = torch.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
 
-    return similarity_diff
+    return similarity_diff.to(DEVICE)
 
 
 def uniqueness(model, feature_activation_masks):
@@ -93,17 +100,17 @@ def uniqueness(model, feature_activation_masks):
     Returns:
 
     """
-    predictions = model(torch.squeeze(feature_activation_masks))
+    predictions = [model(torch.unsqueeze(fam, 0)) for fam in torch.squeeze(feature_activation_masks)]
     uniqueness_score = []
 
     for i in range(len(predictions)):
         i_uniq = 0
         for j in range(len(predictions)):
             if i != j:
-                i_uniq += torch.norm(predictions[i, :] - predictions[j, :])
+                i_uniq += torch.norm(predictions[i] - predictions[j])
         uniqueness_score.append(i_uniq)
 
-    return torch.Tensor(uniqueness_score)
+    return torch.Tensor(uniqueness_score).to(DEVICE)
 
 
 def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
@@ -114,7 +121,8 @@ def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
 
     weights = [(sd_i * u_i) for sd_i, u_i in zip(sd_score, u_score)]
     weighted_fams = [fam * w for fam, w in zip(torch.squeeze(feature_activation_masks), weights)]
+    weighted_fams = torch.stack(weighted_fams)
 
-    explanation = torch.sum(torch.stack(weighted_fams), axis=0)
+    explanation = torch.sum(weighted_fams, axis=0)
 
     return explanation
