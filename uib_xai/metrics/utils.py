@@ -78,10 +78,14 @@ def perturb_img(img, region, region_size, perturbation_value):
 
     img_copy = torch.clone(img.detach())
 
-    if len(img_copy.shape) > 3:
+    if len(img_copy.shape) == 4:
         img_copy[:, :, region[0]: region[0] + region_size[0],
                  region[1]: region[1] + region_size[1]] = perturbation_value
-    else:
+    elif len(img_copy.shape) == 3:
         img_copy[:, region[0]: region[0] + region_size[0],
                  region[1]: region[1] + region_size[1]] = perturbation_value
+    elif len(img_copy.shape) == 2:
+        img_copy[region[0]: region[0] + region_size[0],
+                 region[1]: region[1] + region_size[1]] = perturbation_value
+
     return img_copy
