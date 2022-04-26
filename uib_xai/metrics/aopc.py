@@ -35,7 +35,7 @@ import numpy as np
 from . import utils
 
 
-def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: bool = False):
+def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: bool = True):
     """ Approximate Optimal Perturbation Criterion.
 
     The AOPC metric is a measure of the quality of the adversarial perturbation. The metric is

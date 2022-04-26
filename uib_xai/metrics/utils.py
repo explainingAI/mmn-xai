@@ -28,7 +28,7 @@ def normalize_zero_one(data):
     return data_normalized
 
 
-def get_regions(saliency_map, region_shape, reverse: bool = False):
+def get_regions(saliency_map, region_shape, reverse: bool = True):
     """ Get the regions of the saliency map that will be perturbed
 
     The regions are obtained by sliding the region_shape over the saliency map. Then are sorted
@@ -73,10 +73,10 @@ def perturb_img(img, region, region_size, perturbation_value):
     Returns:
         The perturbed image.
     """
-    if callable(perturbation_value):
-        perturbation_value = perturbation_value()
-
     img_copy = torch.clone(img.detach())
+
+    if callable(perturbation_value):
+        perturbation_value = perturbation_value(img_copy)
 
     if len(img_copy.shape) == 4:
         img_copy[:, :, region[0]: region[0] + region_size[0],
