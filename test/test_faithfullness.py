@@ -20,7 +20,7 @@ class TestFaithfullness(unittest.TestCase):
                                             lambda x: (x[1][1] == 1).float().reshape((1, -1)),
                                             (1, 1), 1)
 
-        self.assertAlmostEqual(faith, 1)
+        self.assertAlmostEqual(faith, -1)
 
     def test_inverse_saliency(self):
         """ Test case: the saliency map is just inverse of the real thing"""
@@ -32,4 +32,4 @@ class TestFaithfullness(unittest.TestCase):
                                             lambda x: (x[1][1] == 1).float().reshape((1, -1)),
                                             (1, 1), 1)
 
-        self.assertAlmostEqual(faith, -1)
+        self.assertAlmostEqual(faith, 1)

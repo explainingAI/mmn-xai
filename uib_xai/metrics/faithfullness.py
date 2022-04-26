@@ -35,11 +35,11 @@ def faithfullness(img, saliency_map, prediction_func, region_shape, value) -> Un
     regions, regions_values = utils.get_regions(saliency_map.numpy(), region_shape)
 
     original_prediction = prediction_func(img).cpu().detach().numpy()
-    original_idx = torch.argmax(original_prediction)
+    original_idx = np.argmax(original_prediction)
     perturb_preds = []
 
     for region in regions:
-        perturbed_img = torch.clone(img)
+        perturbed_img = torch.clone(img.detach())
         perturbed_img = utils.perturb_img(perturbed_img, region, region_shape, value)
         prediction_pert = prediction_func(perturbed_img).cpu().detach().numpy()
 
@@ -47,8 +47,12 @@ def faithfullness(img, saliency_map, prediction_func, region_shape, value) -> Un
 
     regions_values, perturb_preds = np.array(regions_values), np.array(perturb_preds)
     perturb_preds = np.squeeze(perturb_preds)
-    regions_values = regions_values / regions_values.max()
-    perturb_preds = perturb_preds / perturb_preds.max()
+
+    max_regions = regions_values.max() if regions_values.max() > 0 else 1
+    max_perturb = perturb_preds.max() if perturb_preds.max() > 0 else 1
+
+    regions_values = regions_values / max_regions
+    perturb_preds = perturb_preds / max_perturb
 
     faith, _ = stats.pearsonr(regions_values, perturb_preds)
 
