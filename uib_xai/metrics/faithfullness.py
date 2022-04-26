@@ -34,17 +34,16 @@ def faithfullness(img, saliency_map, prediction_func, region_shape, value) -> Un
     """
     regions, regions_values = utils.get_regions(saliency_map.numpy(), region_shape)
 
-    original_prediction = prediction_func(img)
+    original_prediction = prediction_func(img).cpu().detach().numpy()
     original_idx = torch.argmax(original_prediction)
     perturb_preds = []
 
     for region in regions:
         perturbed_img = torch.clone(img)
         perturbed_img = utils.perturb_img(perturbed_img, region, region_shape, value)
-        prediction_pert = prediction_func(perturbed_img)
+        prediction_pert = prediction_func(perturbed_img).cpu().detach().numpy()
 
-        perturb_preds.append(
-            np.abs((original_prediction[original_idx] - prediction_pert[original_idx]).numpy()))
+        perturb_preds.append((original_prediction[original_idx] - prediction_pert[original_idx]))
 
     regions_values, perturb_preds = np.array(regions_values), np.array(perturb_preds)
     perturb_preds = np.squeeze(perturb_preds)
