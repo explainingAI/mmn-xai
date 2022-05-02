@@ -63,6 +63,7 @@ def deletion(image, saliency_map, prediction_func, region_shape, perturbation_va
         now_pred = prediction_func(img_perturbed)
 
         perturbation_scores.append(pre_prediction[original_id] - now_pred[original_id])
+        pre_prediction = now_pred
 
     faith, _ = stats.pearsonr(regions_values, perturbation_scores)
 
