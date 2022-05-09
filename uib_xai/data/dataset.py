@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 """ Pytorch data loader for Mura dataset.
 """
+from typing import List
 import os
 
 import numpy as np
 
-import torch
 from torch.utils.data import Dataset
+import torch
 
 
 class ImageDataset(Dataset):
-    def __init__(self, file_names, get_img_fn, one_hot_encoding: int = -1):
+    def __init__(self, file_names, get_img_fn, one_hot_encoding: int = -1,
+                 removed_classes: List[str] = None):
         if one_hot_encoding > 1:
             raise ValueError(f"Selected option for one hot encoding not valid")
         labels = list(map(lambda x: x.split(os.path.sep)[-2], file_names))
@@ -19,7 +21,13 @@ class ImageDataset(Dataset):
         self.__get_img_fn = get_img_fn
         self.__labels_map = dict()
 
-        for idx, unique_labels in enumerate(np.unique(labels)):
+        unique_labels = np.unique(labels)
+        unique_labels = unique_labels[unique_labels != removed_classes]
+
+        aux = [aux for aux in zip(file_names, labels) if aux[1] in unique_labels]
+        file_names, labels = zip(*aux)
+
+        for idx, unique_labels in enumerate(unique_labels):
             self.__labels_map[unique_labels] = idx
 
         self.__file_names = file_names
