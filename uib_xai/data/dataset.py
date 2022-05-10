@@ -22,7 +22,7 @@ class ImageDataset(Dataset):
         self.__labels_map = dict()
 
         unique_labels = np.unique(labels)
-        unique_labels = unique_labels[unique_labels != removed_classes]
+        unique_labels = [ul for ul in unique_labels if ul not in removed_classes]
 
         aux = [aux for aux in zip(file_names, labels) if aux[1] in unique_labels]
         file_names, labels = zip(*aux)
