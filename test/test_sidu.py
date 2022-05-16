@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
+""" Set of tests for SIDU method proposed by Muddamsetty et al. (2021)
+
+Written by: Miquel Miro-Nicolau (UIB) 2022
 """
 
-"""
 import unittest
 
 import numpy as np
