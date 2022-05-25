@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """ Pytorch data loader for Mura dataset.
+
+Written by: Miquel Miró Nicolau (UIB), 2022
 """
 from typing import List
 import os
