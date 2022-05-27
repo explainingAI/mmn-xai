@@ -8,6 +8,7 @@ import unittest
 import numpy as np
 
 from uib_xai.ood import detector as ood_detector
+from uib_xai.ood import generator as ood_generator
 
 
 class TestOODDetector(unittest.TestCase):
@@ -28,3 +29,41 @@ class TestOODDetector(unittest.TestCase):
         res = ood_detector.detect(lambda x: np.array([0.5, 0.5]), [np.zeros((2, 2))], verbose=True)
 
         self.assertAlmostEqual(res, 0)
+
+
+class TestOODGenerator(unittest.TestCase):
+    def test_generator_cte(self):
+        iterator = iter(ood_generator.get_random_images(10, (512, 512)))
+
+        for i in range(1): # Each of the example
+            random_img = next(iterator)
+
+        self.assertAlmostEqual(random_img.shape[0], 512)
+        self.assertAlmostEqual(random_img.shape[1], 512)
+
+    def test_generator_gauss(self):
+        iterator = iter(ood_generator.get_random_images(10, (512, 512)))
+
+        for i in range(2):  # Each of the example
+            random_img = next(iterator)
+
+        self.assertAlmostEqual(random_img.shape[0], 512)
+        self.assertAlmostEqual(random_img.shape[1], 512)
+
+    def test_generator_speck(self):
+        iterator = iter(ood_generator.get_random_images(10, (512, 512)))
+
+        for i in range(3):  # Each of the example
+            random_img = next(iterator)
+
+        self.assertAlmostEqual(random_img.shape[0], 512)
+        self.assertAlmostEqual(random_img.shape[1], 512)
+
+    def test_generator_sandp(self):
+        iterator = iter(ood_generator.get_random_images(10, (512, 512)))
+
+        for i in range(4):  # Each of the example
+            random_img = next(iterator)
+
+        self.assertAlmostEqual(random_img.shape[0], 512)
+        self.assertAlmostEqual(random_img.shape[1], 512)

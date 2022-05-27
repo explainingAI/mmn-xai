@@ -10,6 +10,24 @@ import numpy as np
 
 from torch.utils.data import Dataset
 import torch
+from torch.utils.data.dataset import T_co
+
+
+class ComplexDataset(Dataset):
+    """ Auxiliar dataset to combine multiple previous existing datasets. """
+
+    def __init__(self, datasets, *args, **kwargs):
+        self.__internal_datasets = [iter(dat) for dat in datasets]
+        self.__last_dataset = 0
+
+        super().__init__(*args, **kwargs)
+
+    def __getitem__(self, index) -> T_co:
+        dataset = self.__internal_datasets[self.__last_dataset + 1 % len(self.__internal_datasets)]
+
+        self.__last_dataset = (self.__last_dataset + 1) % len(self.__internal_datasets)
+
+        return next(dataset)
 
 
 class ImageDataset(Dataset):
@@ -55,3 +73,6 @@ class ImageDataset(Dataset):
 
     def __len__(self):
         return len(self.__file_names)
+
+    def __add__(self, other):
+        return ComplexDataset([self, other])

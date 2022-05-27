@@ -45,3 +45,12 @@ class TestDataset(unittest.TestCase):
 
     def test_dataset_sparce(self):
         dts = creates_dataset(None, 0)
+
+    def test_combine(self):
+        dts1 = creates_dataset(['dos'])
+        dts2 = creates_dataset(['dos', 'tres'])
+
+        dts_combine = dts2 + dts1
+
+        for img, _ in dts_combine:
+            self.assertAlmostEqual(img.shape[1], 10)
