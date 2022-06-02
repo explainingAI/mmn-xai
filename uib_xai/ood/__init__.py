@@ -1,1 +1,1 @@
-from . import detector, generator
+from . import detector
