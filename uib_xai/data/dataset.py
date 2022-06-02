@@ -3,13 +3,12 @@
 
 Written by: Miquel Miró Nicolau (UIB), 2022
 """
-from typing import List
 import os
+from typing import List, Union
 
 import numpy as np
-
-from torch.utils.data import Dataset
 import torch
+from torch.utils.data import Dataset
 from torch.utils.data.dataset import T_co
 
 
@@ -31,6 +30,18 @@ class ComplexDataset(Dataset):
 
 
 class ImageDataset(Dataset):
+    """ General pytorch dataset.
+
+    The data should be build with the following structure:
+        /class_1
+            img1.png
+            img2.png
+            ...
+        /class_2
+            img1.png
+            img2.png
+            ...
+    """
     def __init__(self, file_names, get_img_fn, one_hot_encoding: int = -1,
                  removed_classes: List[str] = None):
         if one_hot_encoding > 1:
@@ -76,3 +87,13 @@ class ImageDataset(Dataset):
 
     def __add__(self, other):
         return ComplexDataset([self, other])
+
+    def map(self, value: Union[int, str]):
+        if type(value) == str:
+            return self.__labels_map[value]
+        elif type(value) == int:
+            for key, val in self.__labels_map.items():
+                if val == value:
+                    return key
+        else:
+            raise ValueError(f"Value {value} not present in this dataset")
