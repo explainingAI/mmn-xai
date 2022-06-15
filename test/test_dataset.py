@@ -2,8 +2,8 @@
 """ Suite of tests for the faithfullness metric.
 
 """
-import unittest
 import os
+import unittest
 
 import numpy as np
 
@@ -44,7 +44,7 @@ class TestDataset(unittest.TestCase):
             break
 
     def test_dataset_sparce(self):
-        dts = creates_dataset(None, 0)
+        creates_dataset(None, 0)
 
     def test_combine(self):
         dts1 = creates_dataset(['dos'])

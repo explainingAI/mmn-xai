@@ -1,4 +1,4 @@
-from . import aopc
-from . import faithfullness
-from . import sparcity
-from . import calibration_rate
+# -*- coding: utf-8 -*-
+from . import aopc, calibration_rate, faithfullness, sparcity
+
+__all__ = aopc.__all__ + calibration_rate.__all__ + faithfullness.__all__ + sparcity.__all__

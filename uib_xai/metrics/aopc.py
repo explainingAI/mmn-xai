@@ -24,15 +24,18 @@ Refs:
      https://ieeexplore.ieee.org/document/7552539
 
 Authors:
-    Samek, Wojciech; Binder, Alexander; Montavon, Gregoire; Lapuschkin, Sebastian; Muller, Klaus-Robert
+    Samek, Wojciech; Binder, Alexander; Montavon, Gregoire; Lapuschkin, Sebastian; Muller,
+    Klaus-Robert
 
 
 Writen by: Miquel Miró Nicolau (UIB)
 """
-import torch
 import numpy as np
+import torch
 
 from . import utils
+
+__all__ = ["aopc"]
 
 
 def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: bool = True):

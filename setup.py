@@ -1,7 +1,8 @@
 # coding=utf-8
 
-from setuptools import setup
 from os import path
+
+from setuptools import setup
 
 this_directory = path.abspath(path.dirname(__file__))
 

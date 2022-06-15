@@ -10,6 +10,8 @@ Written by Miquel Miró-Nicolau (UIB), 2022.
 """
 from typing import Callable, Union
 
+__all__ = ['detect']
+
 
 def detect(model: Callable, extreme_cases: list, threshold: float = None,
            verbose: bool = False) -> Union[bool, float, int]:

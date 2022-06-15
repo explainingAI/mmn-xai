@@ -16,6 +16,8 @@ import numpy as np
 
 from . import utils
 
+__all__ = ['sparcity']
+
 
 def sparcity(saliency_map: np.ndarray):
     sal_map_n = utils.normalize_zero_one(saliency_map)

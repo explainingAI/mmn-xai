@@ -12,14 +12,17 @@ Writen by: Miquel Miró Nicolau (UIB)
 """
 from typing import Union
 
-from scipy import stats
 import numpy as np
 import torch
+from scipy import stats
 
 from . import utils
 
+__all__ = ['faithfullness']
 
-def faithfullness(img, saliency_map: np.ndarray, prediction_func, region_shape, value) -> Union[float, int]:
+
+def faithfullness(img, saliency_map: np.ndarray, prediction_func, region_shape,
+                  value) -> Union[float, int]:
     """ Main function for the calculation of the faithfullness metric.
 
     Args:

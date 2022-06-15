@@ -7,7 +7,6 @@ Written by: Miquel Miro-Nicolau (UIB) 2022
 import unittest
 
 import numpy as np
-
 import torch
 import torch.nn as nn
 from torchvision import models

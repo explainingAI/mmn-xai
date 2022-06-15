@@ -4,7 +4,6 @@
 Written by: Miquel Miró Nicolau (UIB)
 """
 
-from typing import Union, Callable
 import copy
 
 import numpy as np
@@ -51,7 +50,7 @@ def get_regions(saliency_map, region_shape, reverse: bool = True):
             regions.append((horizontal_split, vertical_split))
             regions_values.append(np.sum(
                 saliency_map[horizontal_split: horizontal_split + region_shape[0],
-                vertical_split: vertical_split + region_shape[1]]))
+                             vertical_split: vertical_split + region_shape[1]]))
 
     regions = sorted(zip(regions, regions_values), key=lambda x: x[1], reverse=reverse)
 

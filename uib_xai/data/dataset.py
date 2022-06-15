@@ -45,7 +45,7 @@ class ImageDataset(Dataset):
     def __init__(self, file_names, get_img_fn, one_hot_encoding: int = -1,
                  removed_classes: List[str] = None):
         if one_hot_encoding > 1:
-            raise ValueError(f"Selected option for one hot encoding not valid")
+            raise ValueError("Selected option for one hot encoding not valid")
         labels = list(map(lambda x: x.split(os.path.sep)[-2], file_names))
         is_train_set = list(map(lambda x: x.split(os.path.sep)[-3] == "train", file_names))
 

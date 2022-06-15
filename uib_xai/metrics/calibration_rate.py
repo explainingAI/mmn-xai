@@ -30,11 +30,13 @@ References:
 
 Writen by: Miquel Miró Nicolau (UIB)
 """
-from scipy import stats
 import numpy as np
 import torch
+from scipy import stats
 
 from . import utils
+
+__all__ = ["deletion"]
 
 
 def deletion(image, saliency_map, prediction_func, region_shape, perturbation_value):
@@ -68,8 +70,3 @@ def deletion(image, saliency_map, prediction_func, region_shape, perturbation_va
     faith, _ = stats.pearsonr(regions_values, perturbation_scores)
 
     return faith
-
-
-
-
-

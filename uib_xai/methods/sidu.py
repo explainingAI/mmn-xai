@@ -24,7 +24,6 @@ References:
 from typing import Union
 
 import numpy as np
-
 import torch
 from torch import nn
 
@@ -100,7 +99,8 @@ def uniqueness(model, feature_activation_masks):
     Returns:
 
     """
-    predictions = [model(torch.unsqueeze(fam, 0)) for fam in torch.squeeze(feature_activation_masks)]
+    predictions = [model(torch.unsqueeze(fam, 0)) for fam in
+                   torch.squeeze(feature_activation_masks)]
     uniqueness_score = []
 
     for i in range(len(predictions)):
@@ -121,8 +121,8 @@ def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
 
     weights = [(sd_i * u_i) for sd_i, u_i in zip(sd_score, u_score)]
     weighted_fams = [fam * w for fam, w in zip(torch.squeeze(feature_activation_masks), weights)]
-    weighted_fams = torch.stack(weighted_fams)
+    weighted_fams_tensor = torch.stack(weighted_fams)
 
-    explanation = torch.sum(weighted_fams, axis=0)
+    explanation = torch.sum(weighted_fams_tensor, axis=0)
 
     return explanation
