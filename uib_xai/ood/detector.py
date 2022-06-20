@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Module for the Out of Domain inconsistent behavior detector.
 
 Out of Domain Inconsistent Behavior Detector (OOD-IBD) is a tool for detecting bad output of a model
@@ -8,14 +7,18 @@ with the difference between the output of the model and the ideal output.
 Written by Miquel Miró-Nicolau (UIB), 2022.
 
 """
-from typing import Callable, Union
+from typing import Callable, Optional, Union
 
-__all__ = ['detect']
+__all__ = ["detect"]
 
 
-def detect(model: Callable, extreme_cases: list, threshold: float = None,
-           verbose: bool = False) -> Union[bool, float, int]:
-    """ Automatic method to detect inconsistent results for out of domain samples.
+def detect(
+    model: Callable,
+    extreme_cases: list,
+    threshold: Optional[float] = None,
+    verbose: bool = False,
+) -> Union[bool, float, int]:
+    """Automatic method to detect inconsistent results for out of domain samples.
 
     Args:
         model: Function returning a tensor (numpy array) of

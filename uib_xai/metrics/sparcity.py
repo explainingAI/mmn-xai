@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Module for calculating sparcity of a matrix.
 
 Sparcity is proposed by T. Gomez et al. as an auxiliary metric for evaluating the quality of a
@@ -16,10 +15,10 @@ import numpy as np
 
 from . import utils
 
-__all__ = ['sparcity']
+__all__ = ["sparcity"]
 
 
-def sparcity(saliency_map: np.ndarray):
+def sparcity(saliency_map: np.ndarray) -> float:
     sal_map_n = utils.normalize_zero_one(saliency_map)
 
     mean = np.mean(sal_map_n)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ XAI Metrics: Faithfullness.
 
 This module contains the Faithfullness implementation metric.
@@ -10,7 +9,7 @@ when pixel i is perturbed  to create image xi: Δi = f(x) − f(xi).
 References: https://aaai.org/ojs/index.php/AAAI/article/view/6064
 Writen by: Miquel Miró Nicolau (UIB)
 """
-from typing import Union
+from typing import Callable, Union
 
 import numpy as np
 import torch
@@ -18,12 +17,17 @@ from scipy import stats
 
 from . import utils
 
-__all__ = ['faithfullness']
+__all__ = ["faithfullness"]
 
 
-def faithfullness(img, saliency_map: np.ndarray, prediction_func, region_shape,
-                  value) -> Union[float, int]:
-    """ Main function for the calculation of the faithfullness metric.
+def faithfullness(
+    img: np.ndarray,
+    saliency_map: np.ndarray,
+    prediction_func: Callable,
+    region_shape: tuple,
+    value: Union[Callable, int, float],
+) -> Union[float, int]:
+    """Main function for the calculation of the faithfullness metric.
 
     Args:
         img: NumPy array with the image.
@@ -46,7 +50,9 @@ def faithfullness(img, saliency_map: np.ndarray, prediction_func, region_shape,
         perturbed_img = utils.perturb_img(perturbed_img, region, region_shape, value)
         prediction_pert = prediction_func(perturbed_img)
 
-        perturb_preds.append((original_prediction[original_idx] - prediction_pert[original_idx]))
+        perturb_preds.append(
+            original_prediction[original_idx] - prediction_pert[original_idx]
+        )
 
     regions_values, perturb_preds = np.array(regions_values), np.array(perturb_preds)
     perturb_preds = np.squeeze(perturb_preds)

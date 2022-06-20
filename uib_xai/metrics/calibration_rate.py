@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Module containing metrics proposed by T. Gomez et al.
 
 T. Gomez et al. (2019) proposed a set of metrics to evaluate the goodness of a saliency map method.
@@ -30,6 +29,8 @@ References:
 
 Writen by: Miquel Miró Nicolau (UIB)
 """
+from typing import Callable, Union
+
 import numpy as np
 import torch
 from scipy import stats
@@ -39,7 +40,13 @@ from . import utils
 __all__ = ["deletion"]
 
 
-def deletion(image, saliency_map, prediction_func, region_shape, perturbation_value):
+def deletion(
+    image: np.array,
+    saliency_map: np.array,
+    prediction_func: Callable,
+    region_shape: tuple,
+    perturbation_value: Union[int, Callable],
+) -> float:
     """
 
     Args:
@@ -61,7 +68,9 @@ def deletion(image, saliency_map, prediction_func, region_shape, perturbation_va
     perturbation_scores = []
 
     for region in regions:
-        img_perturbed = utils.perturb_img(img_perturbed, region, region_shape, perturbation_value)
+        img_perturbed = utils.perturb_img(
+            img_perturbed, region, region_shape, perturbation_value
+        )
         now_pred = prediction_func(img_perturbed)
 
         perturbation_scores.append(pre_prediction[original_id] - now_pred[original_id])
