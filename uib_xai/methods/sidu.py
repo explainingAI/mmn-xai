@@ -30,9 +30,9 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def get_feature_activations_masks(
-        conv_output: Union[np.array, torch.Tensor],
-        image: torch.Tensor,
-        weights_thresh: Union[int, float, None] = 0.1,
+    conv_output: Union[np.array, torch.Tensor],
+    image: torch.Tensor,
+    weights_thresh: Union[int, float, None] = 0.1,
 ):
     """
 
@@ -122,7 +122,7 @@ def uniqueness(model, feature_activation_masks):
 
 
 def sidu(model: torch.nn.Module, layer_output, image: Union[np.ndarray, torch.Tensor]):
-    """ SIDU method.
+    """SIDU method.
 
     This method is an XAI method developed by Muddamsetty et al. (2021). The result is a saliency
     map for a particular image.
