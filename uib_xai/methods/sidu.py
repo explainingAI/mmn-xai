@@ -30,9 +30,9 @@ DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
 def get_feature_activations_masks(
-    conv_output: Union[np.array, torch.Tensor],
-    image: torch.Tensor,
-    weights_thresh: Union[int, float, None] = 0.1,
+        conv_output: Union[np.array, torch.Tensor],
+        image: torch.Tensor,
+        weights_thresh: Union[int, float, None] = 0.1,
 ):
     """
 
@@ -90,7 +90,7 @@ def similarity_difference(model, org_img, feature_activation_masks, sigma):
 
     pred_diffs = torch.stack(pred_diffs)
     similarity_diff = torch.norm(pred_diffs, dim=2)
-    similarity_diff = torch.exp((-1 / (2 * (sigma**2))) * similarity_diff)
+    similarity_diff = torch.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
 
     return similarity_diff.to(DEVICE)
 
@@ -121,7 +121,20 @@ def uniqueness(model, feature_activation_masks):
     return torch.Tensor(uniqueness_score).to(DEVICE)
 
 
-def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
+def sidu(model: torch.nn.Module, layer_output, image: Union[np.ndarray, torch.Tensor]):
+    """ SIDU method.
+
+    This method is an XAI method developed by Muddamsetty et al. (2021). The result is a saliency
+    map for a particular image.
+
+    Args:
+        model:
+        layer_output:
+        image:
+
+    Returns:
+
+    """
     feature_activation_masks, image_features = get_feature_activations_masks(
         layer_output, image
     )
@@ -138,3 +151,14 @@ def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
     explanation = torch.sum(weighted_fams_tensor, axis=0)
 
     return explanation
+
+
+def sidu_wrapper(net: torch.nn.Module, layer, image: Union[np.array, torch.Tensor]):
+    activation = {}
+
+    def hook(model, input, output):
+        activation["layer"] = output.detach()
+
+    layer.register_forward_hook(hook)
+
+    return sidu(net, activation["layer"], image).cpu().detach().numpy()

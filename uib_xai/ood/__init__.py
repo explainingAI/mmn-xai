@@ -1,3 +1,3 @@
-from . import detector
+from . import miro
 
-__all__ = detector.__all__
+__all__ = miro.__all__
