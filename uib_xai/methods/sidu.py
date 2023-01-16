@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Implementation of the SIDU method.
 
 The SIDU methods is XAI method developed by Muddamsetty et al. (2021). The result is a saliency
@@ -24,15 +23,17 @@ References:
 from typing import Union
 
 import numpy as np
-
 import torch
 from torch import nn
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
 
-def get_feature_activations_masks(conv_output, image: torch.Tensor,
-                                  weights_thresh: Union[int, float, None] = 0.1):
+def get_feature_activations_masks(
+    conv_output: Union[np.array, torch.Tensor],
+    image: torch.Tensor,
+    weights_thresh: Union[int, float, None] = 0.1,
+):
     """
 
     Args:
@@ -47,14 +48,18 @@ def get_feature_activations_masks(conv_output, image: torch.Tensor,
 
     mask_w = mask_w > weights_thresh
     mask_w = mask_w.type(torch.FloatTensor)
-    resize = nn.Upsample(tuple(image.shape[-2:]), mode='bilinear', align_corners=False)
+    resize = nn.Upsample(tuple(image.shape[-2:]), mode="bilinear", align_corners=False)
     mask_w = resize(mask_w)
 
     feature_activation_masks = mask_w
 
     # Batch, Filters, Channels, Width, Height
-    image = image.reshape((image.shape[0], 1, image.shape[1], image.shape[2], image.shape[3]))
-    mask_w = mask_w.reshape((mask_w.shape[0], mask_w.shape[1], 1, mask_w.shape[2], mask_w.shape[3]))
+    image = image.reshape(
+        (image.shape[0], 1, image.shape[1], image.shape[2], image.shape[3])
+    )
+    mask_w = mask_w.reshape(
+        (mask_w.shape[0], mask_w.shape[1], 1, mask_w.shape[2], mask_w.shape[3])
+    )
     image = image.repeat((1, mask_w.shape[1], 1, 1, 1))
     mask_w = mask_w.repeat((1, 1, image.shape[2], 1, 1))
 
@@ -91,7 +96,7 @@ def similarity_difference(model, org_img, feature_activation_masks, sigma):
 
 
 def uniqueness(model, feature_activation_masks):
-    """ Calculate the uniqueness of the feature activation masks.
+    """Calculate the uniqueness of the feature activation masks.
 
     Args:
         model:
@@ -100,7 +105,10 @@ def uniqueness(model, feature_activation_masks):
     Returns:
 
     """
-    predictions = [model(torch.unsqueeze(fam, 0)) for fam in torch.squeeze(feature_activation_masks)]
+    predictions = [
+        model(torch.unsqueeze(fam, 0))
+        for fam in torch.squeeze(feature_activation_masks)
+    ]
     uniqueness_score = []
 
     for i in range(len(predictions)):
@@ -113,16 +121,44 @@ def uniqueness(model, feature_activation_masks):
     return torch.Tensor(uniqueness_score).to(DEVICE)
 
 
-def sidu(model, layer_output, image: Union[np.ndarray, torch.Tensor]):
-    feature_activation_masks, image_features = get_feature_activations_masks(layer_output, image)
+def sidu(model: torch.nn.Module, layer_output, image: Union[np.ndarray, torch.Tensor]):
+    """SIDU method.
+
+    This method is an XAI method developed by Muddamsetty et al. (2021). The result is a saliency
+    map for a particular image.
+
+    Args:
+        model:
+        layer_output:
+        image:
+
+    Returns:
+
+    """
+    feature_activation_masks, image_features = get_feature_activations_masks(
+        layer_output, image
+    )
 
     sd_score = similarity_difference(model, image, image_features, sigma=0.25)
     u_score = uniqueness(model, image_features)
 
     weights = [(sd_i * u_i) for sd_i, u_i in zip(sd_score, u_score)]
-    weighted_fams = [fam * w for fam, w in zip(torch.squeeze(feature_activation_masks), weights)]
-    weighted_fams = torch.stack(weighted_fams)
+    weighted_fams = [
+        fam * w for fam, w in zip(torch.squeeze(feature_activation_masks), weights)
+    ]
+    weighted_fams_tensor = torch.stack(weighted_fams)
 
-    explanation = torch.sum(weighted_fams, axis=0)
+    explanation = torch.sum(weighted_fams_tensor, axis=0)
 
     return explanation
+
+
+def sidu_wrapper(net: torch.nn.Module, layer, image: Union[np.array, torch.Tensor]):
+    activation = {}
+
+    def hook(model, input, output):
+        activation["layer"] = output.detach()
+
+    layer.register_forward_hook(hook)
+
+    return sidu(net, activation["layer"], image).cpu().detach().numpy()

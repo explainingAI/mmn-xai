@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ Module containing a set of XAI algorithms.
 
 Explainable Artificial Intelligence (XAI) is a collection of algorithm aiming to open black-box
@@ -11,12 +10,19 @@ of methods:
 
 Writen by: Miquel Miró Nicolau (UIB)
 """
+from typing import Callable, List, Optional, Tuple, Union
+
 import numpy as np
 import tensorflow as tf
 
 
-def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None) -> np.ndarray:
-    """ GradCAM implementation.
+def grad_cam(
+    img_array: np.ndarray,
+    model: tf.keras.Model,
+    last_conv_layer_name: str,
+    pred_index: Optional[int] = None,
+) -> np.ndarray:
+    """GradCAM implementation.
 
     Gradient-weighted Class Activation Mapping (Grad-CAM), uses the class-specific gradient
     information flowing into the final convolutional layer of a CNN to produce a coarse localization
@@ -71,8 +77,24 @@ def grad_cam(img_array: np.ndarray, model, last_conv_layer_name, pred_index=None
     return heatmap.numpy()
 
 
-def build_grid(stride, size, image_shape):
-    height, width, _ = image_shape
+def build_grid(
+    stride: Union[int, float],
+    size: np.array,
+    image_shape: Union[Tuple[int, int, int], Tuple[int, int]],
+) -> np.ndarray:
+    """Build grid for a given image.
+
+    A grid is a set of regions defined by the position and size of each of them.
+
+    Args:
+        stride:
+        size:
+        image_shape:
+
+    Returns:
+
+    """
+    height, width = image_shape[:2]
 
     start_cx = np.arange(0, width, size * stride)
     start_cy = np.arange(0, height, size * stride)
@@ -90,8 +112,8 @@ def build_grid(stride, size, image_shape):
     return boxes
 
 
-def print_bboxes(bboxes, shape):
-    """ Draw bounding boxes on an image.
+def print_bboxes(bboxes: List[np.array], shape: Tuple[int, int]) -> np.array:
+    """Draw bounding boxes on an image.
 
     Args:
         bboxes: List of bounding boxes in the form [x1, y1, x2, y2].
@@ -102,13 +124,18 @@ def print_bboxes(bboxes, shape):
     """
     bboxes_img = np.zeros(shape)
     for idx, bb in enumerate(bboxes):
-        bboxes_img[bb[0]: bb[2], bb[1]:bb[3]] = idx + 1
+        bboxes_img[bb[0] : bb[2], bb[1] : bb[3]] = idx + 1
 
     return bboxes_img
 
 
-def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
-    """ Occlusion test for a batch of images.
+def occlusion_test(
+    batch_img: np.array,
+    model: Callable,
+    occlusion_zones: List[np.array],
+    intermediate_value: Optional[Union[Callable, int]] = None,
+) -> np.array:
+    """Occlusion test for a batch of images.
 
     The occlusion test is a simple way to test the robustness of the model to occlusion. Occlusion
     in the context of computer vision is the loss of information in an image by removing a part, in
@@ -126,15 +153,18 @@ def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
     """
     image_shape = batch_img.shape
 
-    batch_img = np.copy(batch_img.reshape((1, image_shape[1], image_shape[2], image_shape[3])))
-    original_prop = model.predict(batch_img)[0]
+    batch_img = np.copy(
+        batch_img.reshape((1, image_shape[1], image_shape[2], image_shape[3]))
+    )
+    original_prop = model(batch_img)[0]
 
     # Getting the index of the winning class:
     index_object = np.argmax(original_prop)
     _, height, width, _ = batch_img.shape
 
-    heatmap = np.zeros((batch_img.shape[1], batch_img.shape[2], batch_img.shape[3]),
-                       dtype=np.float64)
+    heatmap = np.zeros(
+        (batch_img.shape[1], batch_img.shape[2], batch_img.shape[3]), dtype=np.float64
+    )
 
     if intermediate_value is None:
         intermediate_value = (batch_img.max() - batch_img.min()) / 2
@@ -148,8 +178,8 @@ def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
         img_ocluded[0, :, :, 1][mask] = intermediate_value
         img_ocluded[0, :, :, 2][mask] = intermediate_value
 
-        oclussion_prop = model.predict(img_ocluded)[0]
-        oclussion_prop = (original_prop[index_object] - oclussion_prop[index_object])
+        oclussion_prop = model(img_ocluded)[0]
+        oclussion_prop = original_prop[index_object] - oclussion_prop[index_object]
 
         heatmap[:, :, 0][mask] = oclussion_prop
         heatmap[:, :, 1][mask] = oclussion_prop
@@ -162,8 +192,13 @@ def occlusion_test(batch_img, model, occlusion_zones, intermediate_value=None):
     return heatmap
 
 
-def grad_cam_plus(model, img, layer_name, label_name=None, category_id=None):
-    """ Get a heatmap by Grad-CAM++.
+def grad_cam_plus(
+    model: tf.keras.Model,
+    img: np.array,
+    layer_name: str,
+    category_id: Optional[str] = None,
+) -> np.array:
+    """Get a heatmap by Grad-CAM++.
 
     Grad-CAM++ that can provide better visual explanations of CNN model predictions, in terms of
     better object localization as well as explaining occurrences of multiple object instances in a
@@ -179,8 +214,6 @@ def grad_cam_plus(model, img, layer_name, label_name=None, category_id=None):
         model: A model object, build from tf.keras 2.X.
         img: Numpy array with the image to be processed.
         layer_name: String with the name of the layer to be used.
-        label_name: A list or None, show the label name by assign this argument, it should be a list
-                    of all label names.
         category_id: An integer, index of the class. Default is the category with the highest score
                     in the prediction.
     Return:
@@ -189,7 +222,9 @@ def grad_cam_plus(model, img, layer_name, label_name=None, category_id=None):
     img_tensor = np.expand_dims(img, axis=0)
 
     conv_layer = model.get_layer(layer_name)
-    heatmap_model = tf.keras.models.Model([model.inputs], [conv_layer.output, model.output])
+    heatmap_model = tf.keras.models.Model(
+        [model.inputs], [conv_layer.output, model.output]
+    )
 
     with tf.GradientTape() as gradient_tape1:
         with tf.GradientTape() as gradient_tape2:
@@ -197,8 +232,6 @@ def grad_cam_plus(model, img, layer_name, label_name=None, category_id=None):
                 conv_output, predictions = heatmap_model(img_tensor)
                 if category_id is None:
                     category_id = np.argmax(predictions[0])
-                if label_name:
-                    print(label_name[category_id])
                 output = predictions[:, category_id]
                 conv_first_grad = gradient_tape3.gradient(output, conv_output)
             conv_second_grad = gradient_tape2.gradient(conv_first_grad, conv_output)

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """ AOPC (Average Order of Precision Classification) metric.
 
 Abstract of the original paper:
@@ -24,19 +23,31 @@ Refs:
      https://ieeexplore.ieee.org/document/7552539
 
 Authors:
-    Samek, Wojciech; Binder, Alexander; Montavon, Gregoire; Lapuschkin, Sebastian; Muller, Klaus-Robert
+    Samek, Wojciech; Binder, Alexander; Montavon, Gregoire; Lapuschkin, Sebastian; Muller,
+    Klaus-Robert
 
 
 Writen by: Miquel Miró Nicolau (UIB)
 """
-import torch
+from typing import Callable, List, Union
+
 import numpy as np
+import torch
 
 from . import utils
 
+__all__ = ["aopc"]
 
-def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: bool = True):
-    """ Approximate Optimal Perturbation Criterion.
+
+def aopc(
+    dataset: List[np.array],
+    saliency_maps: np.array,
+    prediction_func: Callable,
+    region_shape: tuple,
+    value: Union[int, float],
+    reverse: bool = True,
+) -> float:
+    """Approximate Optimal Perturbation Criterion.
 
     The AOPC metric is a measure of the quality of the adversarial perturbation. The metric is
     calculated as the difference between the original prediction and the prediction of the perturbed
@@ -57,22 +68,27 @@ def aopc(dataset, saliency_maps, prediction_func, region_shape, value, reverse: 
     if len(dataset) != len(saliency_maps):
         raise ValueError("Must pass the same number of images and saliency maps")
 
-    aopc_value = 0
+    aopc_value = 0.0
     regions = []
     for img, sal_map in zip(dataset, saliency_maps):
         original_prediction = prediction_func(img).cpu().detach().numpy()
         original_id = np.argmax(original_prediction)  # llevar
 
         img_perturbed = torch.clone(img.detach())
-        regions, _ = utils.get_regions(sal_map, region_shape=region_shape, reverse=reverse)
+        regions, _ = utils.get_regions(
+            sal_map, region_shape=region_shape, reverse=reverse
+        )
 
         for reg in regions:
             torch.cuda.empty_cache()
-            img_perturbed = utils.perturb_img(img_perturbed, reg, region_shape,
-                                              perturbation_value=value)
+            img_perturbed = utils.perturb_img(
+                img_perturbed, reg, region_shape, perturbation_value=value
+            )
 
             perturbed_prediction = prediction_func(img_perturbed).cpu().detach().numpy()
-            aopc_value += (original_prediction[original_id] - perturbed_prediction[original_id])
+            aopc_value += (
+                original_prediction[original_id] - perturbed_prediction[original_id]
+            )
 
     if len(regions) < 0:
         raise ValueError("Must always exist at least a region")
