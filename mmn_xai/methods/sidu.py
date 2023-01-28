@@ -16,7 +16,7 @@ Abstract:
 
 References:
     Muddamsetty, S. M., Jahromi, M. N., Ciontos, A. E., Fenoy, L. M., & Moeslund, T. B. (2021).
-    Introducing and assessing the explainable ai (uib_xai) method: Sidu. arXiv preprint
+    Introducing and assessing the explainable ai (mmn_xai) method: Sidu. arXiv preprint
     arXiv:2101.10710.
 
 """

@@ -7,7 +7,7 @@ from typing import List, Optional
 
 import numpy as np
 
-from uib_xai.data import dataset
+from mmn_xai.data import dataset
 
 
 def creates_dataset(

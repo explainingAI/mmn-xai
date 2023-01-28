@@ -1,4 +1,4 @@
-# UIB XAI
+# MMN XAI
 ## Library for XAI techniques
 
-#### Developed on the UIB
+#### Developed by Miquel Miró Nicolau (LAIA@UIB)

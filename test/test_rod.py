@@ -6,7 +6,7 @@ import unittest
 
 import numpy as np
 
-from uib_xai.ood import miro as ood_detector
+from mmn_xai.ood import miro as ood_detector
 
 
 class TestRodDetector(unittest.TestCase):
