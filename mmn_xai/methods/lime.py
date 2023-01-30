@@ -153,7 +153,7 @@ def get_exp(
     lime_res = []
     explanation = explainer.explain_instance(img,
                                              lambda x: batch_predict(x, lambda x: net(
-                                                 torch.from_numpy(x).to(device))),
+                                                 torch.from_numpy(x.astype(np.float32)).to(device)).detach().cpu().numpy()),
                                              top_labels=1,
                                              hide_color=hide_color_fn,
                                              num_samples=1500,
