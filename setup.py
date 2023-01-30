@@ -11,14 +11,14 @@ with open("requirements.txt") as fp:
     install_requires = fp.read()
 
 setup(
-    name="uib_xai",
-    version="0.8",
+    name="mmn_xai",
+    version="0.9",
     description="XAI utilities",
     url="https://github.com/explainingAI/uib-xai",
     author="Miquel Miró Nicolau, Dr. Gabriel Moyà Alcover",
     author_email="miquelca32@gmail.com, gabriel_moya@uib.es",
     license="MIT",
-    packages=["uib_xai"],
+    packages=["mmn_xai"],
     keywords=[
         "Deep Learning",
         "Computer Vision",
