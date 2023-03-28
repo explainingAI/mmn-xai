@@ -160,5 +160,6 @@ def sidu_wrapper(net: torch.nn.Module, layer, image: Union[np.array, torch.Tenso
         activation["layer"] = output.detach()
 
     layer.register_forward_hook(hook)
+    _ = net(image)
 
     return sidu(net, activation["layer"], image).cpu().detach().numpy()

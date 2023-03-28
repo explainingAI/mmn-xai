@@ -12,7 +12,7 @@ from lime import lime_image
 
 
 def swap_colors(pixels):
-    """ Function to perturb the image by swapping the colors of the pixels.
+    """Function to perturb the image by swapping the colors of the pixels.
 
 
     Args:
@@ -32,7 +32,7 @@ def swap_colors(pixels):
 
 
 def batch_predict(image: np.array, network: Callable) -> np.array:
-    """ Function to predict the output of the network for a batch of images.
+    """Function to predict the output of the network for a batch of images.
 
     Args:
         image: NumPy array of shape (n, m, 3) with the image.
@@ -51,8 +51,10 @@ def batch_predict(image: np.array, network: Callable) -> np.array:
     return logit
 
 
-def defined(image: np.array, attribution_function: Callable, g_x: Callable = None) -> np.array:
-    """ Predict using the attribution function directly
+def defined(
+    image: np.array, attribution_function: Callable, g_x: Callable = None
+) -> np.array:
+    """Predict using the attribution function directly
 
     Args:
         image: Numpy array of shape (b, c, n, m) with a batch of images.
@@ -74,7 +76,7 @@ def defined(image: np.array, attribution_function: Callable, g_x: Callable = Non
 
 
 def count_by_value(image: np.array) -> np.array:
-    """ Function to count the number of pixels with each value.
+    """Function to count the number of pixels with each value.
 
     Counts the number of objects with each different value.
 
@@ -97,7 +99,7 @@ def count_by_value(image: np.array) -> np.array:
 
 
 def own_segment(image: np.array) -> np.array:
-    """ Function to segment the image into different objects.
+    """Function to segment the image into different objects.
 
     LIME methods needs a segmented images. This image is used to perturb the original image. This
     method allows to identify the different objects according to their value and separates them
@@ -114,8 +116,9 @@ def own_segment(image: np.array) -> np.array:
     image = copy.deepcopy(image)
     image[image >= 1] = 1
 
-    cont, _ = cv2.findContours(image.astype(np.uint8)[:, :, 0], cv2.RETR_TREE,
-                               cv2.CHAIN_APPROX_SIMPLE)
+    cont, _ = cv2.findContours(
+        image.astype(np.uint8)[:, :, 0], cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE
+    )
 
     for i, c in enumerate(cont):
         cv2.drawContours(aux_img_seg, [c], -1, i + 1, -1)
@@ -124,14 +127,14 @@ def own_segment(image: np.array) -> np.array:
 
 
 def get_exp(
-        explainer: lime_image.LimeImageExplainer,
-        img: np.array,
-        net: Callable,
-        device: str,
-        hide_color_fn=None,
-        segmentation_fn=None
+    explainer: lime_image.LimeImageExplainer,
+    img: np.array,
+    net: Callable,
+    device: str,
+    hide_color_fn=None,
+    segmentation_fn=None,
 ):
-    """ Wrapper for the LIME method.
+    """Wrapper for the LIME method.
 
     Args:
         explainer: Object of the LIME library to explain the image.
@@ -151,19 +154,28 @@ def get_exp(
         segmentation_fn = own_segment
 
     lime_res = []
-    explanation = explainer.explain_instance(img,
-                                             lambda x: batch_predict(x, lambda x: net(
-                                                 torch.from_numpy(x.astype(np.float32)).to(device)).detach().cpu().numpy()),
-                                             top_labels=1,
-                                             hide_color=hide_color_fn,
-                                             num_samples=1500,
-                                             segmentation_fn=segmentation_fn,
-                                             batch_size=1,
-                                             random_seed=42,
-                                             progress_bar=False)
+    explanation = explainer.explain_instance(
+        img,
+        lambda x: batch_predict(
+            x,
+            lambda x: net(torch.from_numpy(x.astype(np.float32)).to(device))
+            .detach()
+            .cpu()
+            .numpy(),
+        ),
+        top_labels=1,
+        hide_color=hide_color_fn,
+        num_samples=1500,
+        segmentation_fn=segmentation_fn,
+        batch_size=1,
+        random_seed=42,
+        progress_bar=False,
+    )
 
-    mask = np.zeros((explanation.segments.shape[0], explanation.segments.shape[1], 3),
-                    dtype=np.float64)
+    mask = np.zeros(
+        (explanation.segments.shape[0], explanation.segments.shape[1], 3),
+        dtype=np.float64,
+    )
 
     for k in explanation.local_exp.keys():
         for key, val in explanation.local_exp[k]:
