@@ -48,8 +48,16 @@ def densify(
     Returns:
         numpy array of shape (H, W) containing the densified explanation
     """
+    if expl.shape != image.shape:
+        raise ValueError(f"Different shapes {expl.shape} != {image.shape}")
+
     mask = np.copy(image)
+
+    if mask.max() > 1:
+        mask = mask / mask.max()
+
     mask[mask != 1] = 0
+    mask = mask.astype(np.uint8)
 
     dense_expl = []
     contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)

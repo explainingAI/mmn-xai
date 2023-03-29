@@ -45,7 +45,7 @@ def batch_predict(image: np.array, network: Callable) -> np.array:
 
     image = np.transpose(image, (0, 3, 1, 2))
 
-    logit = network(image[:, 1:2, :, :])
+    logit = network(image[:, 0:1, :, :])
     logit = logit.reshape((-1, 1))
 
     return logit
@@ -112,7 +112,7 @@ def own_segment(image: np.array) -> np.array:
     Returns:
         2-Channel images where the values of pixel indicades the class that represents.
     """
-    aux_img_seg = np.zeros_like(image.astype(np.uint8)[:, :, 0], dtype=np.uint8)
+    img_seg = np.zeros_like(image.astype(np.uint8)[:, :, 0], dtype=np.uint8)
     image = copy.deepcopy(image)
     image[image >= 1] = 1
 
@@ -121,9 +121,9 @@ def own_segment(image: np.array) -> np.array:
     )
 
     for i, c in enumerate(cont):
-        cv2.drawContours(aux_img_seg, [c], -1, i + 1, -1)
+        cv2.drawContours(img_seg, [c], -1, i + 1, -1)
 
-    return aux_img_seg
+    return img_seg
 
 
 def get_exp(

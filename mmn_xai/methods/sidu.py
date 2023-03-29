@@ -26,51 +26,64 @@ import numpy as np
 import torch
 from torch import nn
 
-DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 
-
-def get_feature_activations_masks(
+def generate_feature_activation_masks(
     conv_output: Union[np.array, torch.Tensor],
     image: torch.Tensor,
+    device: torch.device,
     weights_thresh: Union[int, float, None] = 0.1,
 ):
     """
+    Generate feature activation masks for an image.
 
     Args:
-        conv_output:
-        image:
-        weights_thresh:
+        conv_output: the output of the convolutional layer
+        image: the input image
+        weights_thresh: the threshold to apply to the convolutional output to create the mask
+        device: Cuda device to use.
 
     Returns:
 
     """
-    mask_w = conv_output
+    # Apply the weight threshold to the convolutional output
+    feature_activation_masks = conv_output
+    feature_activation_masks = feature_activation_masks > weights_thresh
+    feature_activation_masks = feature_activation_masks.type(torch.FloatTensor).to(
+        device
+    )
 
-    mask_w = mask_w > weights_thresh
-    mask_w = mask_w.type(torch.FloatTensor)
+    # Resize the mask to the same size as the input image
     resize = nn.Upsample(tuple(image.shape[-2:]), mode="bilinear", align_corners=False)
-    mask_w = resize(mask_w)
-
-    feature_activation_masks = mask_w
+    feature_activation_masks = resize(feature_activation_masks)
 
     # Batch, Filters, Channels, Width, Height
     image = image.reshape(
         (image.shape[0], 1, image.shape[1], image.shape[2], image.shape[3])
     )
-    mask_w = mask_w.reshape(
-        (mask_w.shape[0], mask_w.shape[1], 1, mask_w.shape[2], mask_w.shape[3])
+    feature_activation_masks = feature_activation_masks.reshape(
+        (
+            feature_activation_masks.shape[0],
+            feature_activation_masks.shape[1],
+            1,
+            feature_activation_masks.shape[2],
+            feature_activation_masks.shape[3],
+        )
     )
-    image = image.repeat((1, mask_w.shape[1], 1, 1, 1))
-    mask_w = mask_w.repeat((1, 1, image.shape[2], 1, 1))
+    image = image.repeat((1, feature_activation_masks.shape[1], 1, 1, 1))
+    feature_activation_masks = feature_activation_masks.repeat(
+        (1, 1, image.shape[2], 1, 1)
+    )
 
-    mask_w = mask_w.to(DEVICE)
+    feature_activation_masks = feature_activation_masks.to(device)
 
-    image_features = image * mask_w
+    image_features = image * feature_activation_masks
 
     return feature_activation_masks, image_features
 
 
-def similarity_difference(model, org_img, feature_activation_masks, sigma):
+def similarity_difference(
+    model, org_img, feature_activation_masks, sigma, device: torch.device
+):
     """
 
     Args:
@@ -92,10 +105,14 @@ def similarity_difference(model, org_img, feature_activation_masks, sigma):
     similarity_diff = torch.norm(pred_diffs, dim=2)
     similarity_diff = torch.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
 
-    return similarity_diff.to(DEVICE)
+    return similarity_diff.to(device)
 
 
-def uniqueness(model, feature_activation_masks):
+def uniqueness(
+    model,
+    feature_activation_masks,
+    device: torch.device,
+):
     """Calculate the uniqueness of the feature activation masks.
 
     Args:
@@ -118,29 +135,47 @@ def uniqueness(model, feature_activation_masks):
                 i_uniq += torch.norm(predictions[i] - predictions[j])
         uniqueness_score.append(i_uniq)
 
-    return torch.Tensor(uniqueness_score).to(DEVICE)
+    return torch.Tensor(uniqueness_score).to(device)
 
 
-def sidu(model: torch.nn.Module, layer_output, image: Union[np.ndarray, torch.Tensor]):
-    """SIDU method.
-
-    This method is an XAI method developed by Muddamsetty et al. (2021). The result is a saliency
-    map for a particular image.
+def sidu(
+    model: torch.nn.Module,
+    layer_output,
+    image: Union[np.ndarray, torch.Tensor],
+    device: torch.device,
+):
+    """
+    Computes the SIDU feature map of an image given a pre-trained PyTorch model.
 
     Args:
-        model:
-        layer_output:
-        image:
+        model (torch.nn.Module): A pre-trained PyTorch model used to compute the feature maps.
+        layer_output: The layer output used to generate the feature maps.
+        image (Union[np.ndarray, torch.Tensor]): A numpy array or PyTorch tensor representing the
+                                                input image.
+        device (torch.device, optional): The device to use for computations. If None, defaults to
+                                        "cuda" if available, else "cpu".
 
     Returns:
+        A PyTorch tensor representing the SIDU feature map of the input image.
 
+    Raises:
+        TypeError: If the `model` argument is not a PyTorch module or the `image` argument is not a
+            numpy array or PyTorch tensor.
+    Notes:
+        The SIDU algorithm is used for generating visual explanations of deep neural networks. It
+        combines information about the importance of image features (as measured by the SD score)
+        with information about the similarity of predictions across different image feature
+        activations (as measured by the U score), to generate a weighted sum of feature activation
+        maps that captures the most semantically relevant features for a given input image.
     """
-    feature_activation_masks, image_features = get_feature_activations_masks(
-        layer_output, image
+    feature_activation_masks, image_features = generate_feature_activation_masks(
+        layer_output, image, device
     )
 
-    sd_score = similarity_difference(model, image, image_features, sigma=0.25)
-    u_score = uniqueness(model, image_features)
+    sd_score = similarity_difference(
+        model, image, image_features, sigma=0.25, device=device
+    )
+    u_score = uniqueness(model, image_features, device)
 
     weights = [(sd_i * u_i) for sd_i, u_i in zip(sd_score, u_score)]
     weighted_fams = [
@@ -153,7 +188,14 @@ def sidu(model: torch.nn.Module, layer_output, image: Union[np.ndarray, torch.Te
     return explanation
 
 
-def sidu_wrapper(net: torch.nn.Module, layer, image: Union[np.array, torch.Tensor]):
+def sidu_wrapper(
+    net: torch.nn.Module,
+    layer,
+    image: Union[np.array, torch.Tensor],
+    device: torch.device = None,
+):
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
     activation = {}
 
     def hook(model, input, output):
@@ -162,4 +204,4 @@ def sidu_wrapper(net: torch.nn.Module, layer, image: Union[np.array, torch.Tenso
     layer.register_forward_hook(hook)
     _ = net(image)
 
-    return sidu(net, activation["layer"], image).cpu().detach().numpy()
+    return sidu(net, activation["layer"], image, device).cpu().detach().numpy()
