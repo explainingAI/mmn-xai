@@ -9,7 +9,7 @@ import numpy as np
 
 
 def normalize(expl: np.ndarray) -> np.ndarray:
-    """ Normalize the explanation values to the range [0, 1].
+    """Normalize the explanation values to the range [0, 1].
 
     Args:
         expl: numpy array of shape (H, W) containing the explanation values
@@ -24,9 +24,10 @@ def normalize(expl: np.ndarray) -> np.ndarray:
     return expl
 
 
-def densify(expl: np.ndarray, image: np.ndarray, agg_func: Callable,
-            norm: bool = True) -> np.ndarray:
-    """ Densify the explanation by aggregating the explanation values of the pixels belonging to
+def densify(
+    expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
+) -> np.ndarray:
+    """Densify the explanation by aggregating the explanation values of the pixels belonging to
     the same object.
 
     The saliency maps obtained by the XAI methods can be sparse or dense. A sparse saliency map
@@ -47,14 +48,24 @@ def densify(expl: np.ndarray, image: np.ndarray, agg_func: Callable,
     Returns:
         numpy array of shape (H, W) containing the densified explanation
     """
+    if expl.shape != image.shape:
+        raise ValueError(f"Different shapes {expl.shape} != {image.shape}")
+
     mask = np.copy(image)
-    mask[mask != 0] = 1
+
+    if mask.max() > 1:
+        mask = mask / mask.max()
+
+    mask[mask != 1] = 0
+    mask = mask.astype(np.uint8)
 
     dense_expl = []
     contours, _ = cv2.findContours(mask, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
     for c in contours:
         mask_c = np.zeros_like(image).astype(np.float32)
-        mask_c = cv2.drawContours(image=mask_c, contours=[c], contourIdx=-1, color=1, thickness=-1)
+        mask_c = cv2.drawContours(
+            image=mask_c, contours=[c], contourIdx=-1, color=1, thickness=-1
+        )
         mask_c[mask_c == 1] = agg_func(expl[mask_c == 1])
 
         dense_expl.append(mask_c)
@@ -62,7 +73,9 @@ def densify(expl: np.ndarray, image: np.ndarray, agg_func: Callable,
     dense_expl = np.array(dense_expl)
     dense_expl = np.sum(dense_expl, axis=0)
 
+    dense_expl += expl * (dense_expl == 0).astype(np.uint8)
+
     if norm:
-        dense_expl[dense_expl != 0] = (dense_expl[dense_expl != 0] / np.max(dense_expl))
+        dense_expl[dense_expl != 0] = dense_expl[dense_expl != 0] / np.max(dense_expl)
 
     return dense_expl

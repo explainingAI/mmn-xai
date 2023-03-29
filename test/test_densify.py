@@ -15,8 +15,9 @@ class TestDensify(unittest.TestCase):
         explanation[5:7, 5:7] = 1
 
         explanation[6, 6] = 2
+        explanation[0:2, 0:2] = 1
 
         xai_densify = utils.densify(explanation, image, np.max, norm=False)
         summed = int(np.sum(xai_densify[5:7, 5:7]))  # 2x2x2
 
-        self.assertAlmostEqual(summed, (2*2*2))
+        self.assertAlmostEqual(summed, (2 * 2 * 2))
