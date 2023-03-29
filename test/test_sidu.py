@@ -74,7 +74,7 @@ class TestSIDU(unittest.TestCase):
         model = ModelTest(weights)
 
         image = torch.zeros((1, 3, 50, 50))
-        importance = sidu.sidu(model, weights, image=image)
+        importance = sidu.sidu(model, weights, image=image, device="cpu")
 
         self.assertAlmostEqual(np.count_nonzero(importance.cpu().numpy()), 0)
 
@@ -83,6 +83,6 @@ class TestSIDU(unittest.TestCase):
         model = ModelTest(weights)
 
         image = torch.zeros((1, 1, 50, 50))
-        importance = sidu.sidu(model, weights, image=image)
+        importance = sidu.sidu(model, weights, image=image, device="cpu")
 
         self.assertAlmostEqual(np.count_nonzero(importance.cpu().numpy()), 0)
