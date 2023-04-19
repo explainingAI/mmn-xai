@@ -22,13 +22,9 @@ def swap_colors(pixels):
         Numpy images perturbed.
     """
     mean = np.mean(pixels)
+    ret_val = ((mean + 1) % 2) + 1
 
-    if mean == 1:
-        mean = 2
-    elif mean == 2:
-        mean = 1
-
-    return mean
+    return ret_val
 
 
 def batch_predict(image: np.array, network: Callable) -> np.array:
@@ -133,6 +129,7 @@ def get_exp(
     device: str,
     hide_color_fn=None,
     segmentation_fn=None,
+    num_samples: int = 1500,
 ):
     """Wrapper for the LIME method.
 
@@ -143,16 +140,11 @@ def get_exp(
         device: String with the device to use.
         hide_color_fn: Function to perturb the image.
         segmentation_fn: Function to segment the image.
+        num_samples: Integer, parameter of LIME method.
 
     Returns:
         Numpy array with the explanation.
     """
-    if hide_color_fn is None:
-        hide_color_fn = swap_colors
-
-    if segmentation_fn is None:
-        segmentation_fn = own_segment
-
     lime_res = []
     explanation = explainer.explain_instance(
         img,
@@ -165,9 +157,9 @@ def get_exp(
         ),
         top_labels=1,
         hide_color=hide_color_fn,
-        num_samples=1500,
+        num_samples=num_samples,
         segmentation_fn=segmentation_fn,
-        batch_size=1,
+        batch_size=img.shape[0],
         random_seed=42,
         progress_bar=False,
     )

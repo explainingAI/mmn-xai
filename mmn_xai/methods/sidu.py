@@ -99,7 +99,7 @@ def similarity_difference(
     pred_diffs = []
     for fam in torch.squeeze(feature_activation_masks):
         prediction = model(torch.unsqueeze(fam, 0))
-        pred_diffs.append(prediction - p_org)
+        pred_diffs.append(p_org - prediction)
 
     pred_diffs = torch.stack(pred_diffs)
     similarity_diff = torch.norm(pred_diffs, dim=2)
