@@ -57,7 +57,7 @@ class RISE(nn.Module):
         # p = nn.Softmax(dim=1)(model(stack)) processed in batches
         p = []
         for i in range(0, N, self.gpu_batch):
-            p.append(self.model(stack[i : min(i + self.gpu_batch, N)]))
+            p.append(self.model(stack[i : min(i + self.gpu_batch, N)]).detach())
         p = torch.cat(p)
         # Number of classes
         CL = p.size(1)
