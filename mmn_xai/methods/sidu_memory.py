@@ -28,10 +28,10 @@ from torch import nn
 
 
 def generate_feature_activation_masks(
-    conv_output: Union[np.array, torch.Tensor],
-    image: torch.Tensor,
-    device: torch.device,
-    weights_thresh: Union[int, float, None] = 0.1,
+        conv_output: Union[np.array, torch.Tensor],
+        image: torch.Tensor,
+        device: torch.device,
+        weights_thresh: Union[int, float, None] = 0.1,
 ):
     """
     Generate feature activation masks for an image.
@@ -57,16 +57,27 @@ def generate_feature_activation_masks(
     # Batch, Filters, Channels, Width, Height
     for i in range(image.shape[1]):
         for j in range(mask_w.shape[1]):
-            yield mask_w[0:1, j : j + 1, :, :], (
-                image[0:1, :, :, :] * mask_w[0:1, j : j + 1, :, :]
+            yield mask_w[0:1, j: j + 1, :, :], (
+                    image[0:1, :, :, :] * mask_w[0:1, j: j + 1, :, :]
             )
 
 
+def kernel(vector: torch.Tensor, kernel_width: float = 0.25) -> torch.Tensor:
+    """ computing the exponential weights for the differences"""
+    return torch.sqrt(torch.exp(-(vector ** 2) / kernel_width ** 2))
+
+
+def normalize(array):
+    return (array - array.min()) / (array.max() - array.min() + 1e-13)
+
+
 def sidu(
-    model: torch.nn.Module,
-    layer_output,
-    image: Union[np.ndarray, torch.Tensor],
-    device: torch.device = None,
+        model: torch.nn.Module,
+        layer_output,
+        image: Union[np.ndarray, torch.Tensor],
+        device: torch.device = None,
+        cls_id: int = None,
+        paper: bool = False,
 ):
     """
     Computes the SIDU feature map of an image given a pre-trained PyTorch model.
@@ -78,6 +89,10 @@ def sidu(
                                                 input image.
         device (torch.device, optional): The device to use for computations. If None, defaults to
                                         "cuda" if available, else "cpu".
+        cls_id (int, optional): The class to compute the feature map for. If None, defaults to the
+                            class with the highest probability.
+        paper (bool, optional): If True, the paper implementation is used. If False, the tensorflow
+                                implementation is used. Defaults to False.
 
     Returns:
         A PyTorch tensor representing the SIDU feature map of the input image.
@@ -95,45 +110,51 @@ def sidu(
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    image: torch.Tensor = image.to(device)
-    predictions: list = []
-    sd_score: list = []
+    with torch.no_grad():
+        image = image.to(device)
+        predictions = []
+        sd_score = []
 
-    p_org: torch.Tensor = model(image).detach()
-    for feature_activation_mask, image_feature in generate_feature_activation_masks(
-        layer_output, image
-    ):
-        pred = model(image_feature).detach()
-        sd_score.append(pred - p_org)
+        p_org: torch.Tensor = model(image).detach()
+        if cls_id is None:
+            cls_id = torch.argmax(torch.squeeze(p_org))
+        for feature_activation_mask, image_feature in generate_feature_activation_masks(
+                layer_output, image, device=device
+        ):
+            pred = model(image_feature).detach()
+            sd_score.append(torch.abs(torch.squeeze(p_org - pred)[cls_id]))
 
-        predictions.append(pred)
-    sd_score = torch.stack(sd_score).reshape((-1, 2))
-    sd_score = torch.norm(sd_score, dim=1)
-    sd_score = torch.exp((-1 / (2 * (0.25 ** 2))) * sd_score)
+            predictions.append(pred)
+        sd_score = torch.stack(sd_score).reshape((-1))
 
-    u_score = torch.zeros((len(predictions), len(predictions))).to(device)
-    predictions = torch.stack(predictions).to(device)
-    for i in range(len(predictions)):
-        u_score[i, :] = torch.norm(predictions[i] - predictions)
+        if paper:
+            sd_score = torch.exp((-sd_score / (2 * (0.25 ** 2))))
+        else:
+            sd_score = kernel(sd_score)
+        sd_score = normalize(sd_score)
 
-    u_score = torch.sum(u_score, axis=-1)
-    weights = sd_score * u_score
+        predictions = torch.stack(predictions)[:, 0, cls_id].to(device)
+        u_score = torch.sum(predictions - predictions[:, None], dim=-1)
+        u_score = normalize(u_score)
 
-    weighted_fams_tensor = torch.zeros_like(feature_activation_mask)
+        weights = sd_score * u_score
 
-    for w, (fam, _) in zip(
-        weights, generate_feature_activation_masks(layer_output, image, device=device)
-    ):
-        weighted_fams_tensor += (fam * w).detach()
+        weighted_fams_tensor = torch.zeros_like(feature_activation_mask)
 
-    return weighted_fams_tensor
+        for w, (fam, _) in zip(
+                weights, generate_feature_activation_masks(layer_output, image, device=device)
+        ):
+            weighted_fams_tensor += (fam * w).detach()
+        sal_map = weighted_fams_tensor / len(weights) / 0.5  # extret d'implementació TF
+
+    return sal_map
 
 
 def sidu_wrapper(
-    net: torch.nn.Module,
-    layer,
-    image: Union[np.array, torch.Tensor],
-    device: torch.device = None,
+        net: torch.nn.Module,
+        layer,
+        image: Union[np.array, torch.Tensor],
+        device: torch.device = None,
 ):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"

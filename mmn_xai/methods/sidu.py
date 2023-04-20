@@ -183,7 +183,7 @@ def sidu(
     ]
     weighted_fams_tensor = torch.stack(weighted_fams)
 
-    explanation = torch.sum(weighted_fams_tensor, axis=0)
+    explanation = torch.mean(weighted_fams_tensor, axis=0)
 
     return explanation
 
