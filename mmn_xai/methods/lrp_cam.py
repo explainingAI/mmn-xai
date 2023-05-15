@@ -10,7 +10,7 @@ from captum import attr
 from . import utils
 
 
-class lrp_cam:
+class LrpCam:
     """ XAI method that combines LRP and CAM approaches.
 
     """

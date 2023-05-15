@@ -1,3 +1,4 @@
+# flake8: noqa
 # pylint: skip-file
 """ Module containing the implementation of the GODIN method.
 

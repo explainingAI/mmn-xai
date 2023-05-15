@@ -23,7 +23,7 @@ class TestModel(unittest.TestCase):
 
         sub_model = torch.nn.Sequential(*list(model)[2:])
 
-        xai = lrp_cam.lrp_cam(model, sub_model)
+        xai = lrp_cam.LrpCam(model, sub_model)
         expl = xai(image=torch.zeros((1, 1, 10, 10)), target=None, layer=model[0])
 
         self.assertTupleEqual(tuple(expl.shape), (10, 10))

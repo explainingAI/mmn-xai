@@ -174,5 +174,6 @@ def get_exp(
             if key != 0:
                 mask[:, :, k][explanation.segments == key] = abs(val)
     lime_res.append(mask)
+    lime_res = np.array(lime_res)
 
-    return lime_res
+    return lime_res[:, :, :, 0]

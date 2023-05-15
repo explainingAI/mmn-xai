@@ -54,9 +54,6 @@ class ImageDataset(Dataset):
         if one_hot_encoding > 1:
             raise ValueError("Selected option for one hot encoding not valid")
         labels = list(map(lambda x: x.split(os.path.sep)[-2], file_names))
-        is_train_set = list(
-            map(lambda x: x.split(os.path.sep)[-3] == "train", file_names)
-        )
 
         self.__get_img_fn = get_img_fn
         self.__labels_map = {}
@@ -96,7 +93,7 @@ class ImageDataset(Dataset):
     def __add__(self, other: Dataset) -> ComplexDataset:
         return ComplexDataset([self, other])
 
-    def map(self, value: Union[int, str]) -> Union[str, int]:
+    def map(self, value: Union[int, str]) -> Union[str, int, None]:
         """Conversion from id to name or viceversa.
 
         Args:
@@ -105,7 +102,7 @@ class ImageDataset(Dataset):
         Returns:
 
         """
-        if not (isinstance(value, str) or isinstance(value, int)):
+        if not isinstance(value, (str, int)):
             raise ValueError(f"Value {value} not present in this dataset")
 
         if isinstance(value, str):
@@ -115,3 +112,5 @@ class ImageDataset(Dataset):
             for key, val in self.__labels_map.items():
                 if val == value:
                     return key
+
+        return None

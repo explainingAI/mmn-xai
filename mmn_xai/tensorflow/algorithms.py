@@ -123,8 +123,8 @@ def print_bboxes(bboxes: List[np.array], shape: Tuple[int, int]) -> np.array:
         Image with bounding boxes drawn on it.
     """
     bboxes_img = np.zeros(shape)
-    for idx, bb in enumerate(bboxes):
-        bboxes_img[bb[0]: bb[2], bb[1]: bb[3]] = idx + 1
+    for idx, bbox in enumerate(bboxes):
+        bboxes_img[bbox[0]: bbox[2], bbox[1]: bbox[3]] = idx + 1
 
     return bboxes_img
 
@@ -160,7 +160,6 @@ def occlusion_test(
 
     # Getting the index of the winning class:
     index_object = np.argmax(original_prop)
-    _, height, width, _ = batch_img.shape
 
     heatmap = np.zeros(
         (batch_img.shape[1], batch_img.shape[2], batch_img.shape[3]), dtype=np.float64
