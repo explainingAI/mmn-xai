@@ -6,6 +6,11 @@ from typing import Callable
 
 import cv2
 import numpy as np
+import torch
+
+
+def to_numpy(tensor: torch.Tensor):
+    return tensor.detach().cpu().numpy()
 
 
 def normalize(expl: np.ndarray) -> np.ndarray:
