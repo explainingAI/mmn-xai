@@ -51,8 +51,8 @@ def get_regions(saliency_map, region_shape, reverse: bool = True):
             regions_values.append(
                 np.sum(
                     saliency_map[
-                        horizontal_split : horizontal_split + region_shape[0],
-                        vertical_split : vertical_split + region_shape[1],
+                        horizontal_split: horizontal_split + region_shape[0],
+                        vertical_split: vertical_split + region_shape[1],
                     ]
                 )
             )
@@ -86,19 +86,19 @@ def perturb_img(img, region, region_size, perturbation_value):
         img_copy[
             :,
             :,
-            region[0] : region[0] + region_size[0],
-            region[1] : region[1] + region_size[1],
+            region[0]: region[0] + region_size[0],
+            region[1]: region[1] + region_size[1],
         ] = perturbation_value
     elif len(img_copy.shape) == 3:
         img_copy[
             :,
-            region[0] : region[0] + region_size[0],
-            region[1] : region[1] + region_size[1],
+            region[0]: region[0] + region_size[0],
+            region[1]: region[1] + region_size[1],
         ] = perturbation_value
     elif len(img_copy.shape) == 2:
         img_copy[
-            region[0] : region[0] + region_size[0],
-            region[1] : region[1] + region_size[1],
+            region[0]: region[0] + region_size[0],
+            region[1]: region[1] + region_size[1],
         ] = perturbation_value
 
     return img_copy

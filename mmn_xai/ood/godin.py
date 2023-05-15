@@ -1,3 +1,4 @@
+# pylint: skip-file
 """ Module containing the implementation of the GODIN method.
 
 This module contains two implementation of GODIN method. The first one is a PyTorch implementation

@@ -5,18 +5,15 @@ based out-of-domain (OOD) data. The definition of what is considered an inconsis
 with the difference between the output of the model and the ideal output.
 
 Written by Miquel Miró-Nicolau (UIB), 2022.
-
 """
 from typing import Callable, Optional, Union
 
-__all__ = ["detect"]
-
 
 def detect(
-    model: Callable,
-    extreme_cases: list,
-    threshold: Optional[float] = None,
-    verbose: bool = False,
+        model: Callable,
+        extreme_cases: list,
+        threshold: Optional[float] = None,
+        verbose: bool = False,
 ) -> Union[bool, float, int]:
     """Automatic method to detect inconsistent results for out of domain samples.
 
@@ -48,3 +45,6 @@ def detect(
         is_ood = bool(is_ood)
 
     return is_ood
+
+
+__all__ = ["detect"]

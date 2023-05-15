@@ -25,7 +25,7 @@ def normalize(expl: np.ndarray) -> np.ndarray:
 
 
 def densify(
-        expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
+    expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
 ) -> np.ndarray:
     """Densify the explanation by aggregating the explanation values of the pixels belonging to
     the same object.
