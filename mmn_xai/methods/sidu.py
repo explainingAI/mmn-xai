@@ -28,10 +28,10 @@ from torch import nn
 
 
 def generate_feature_activation_masks(
-    conv_output: Union[np.array, torch.Tensor],
-    image: torch.Tensor,
-    device: torch.device,
-    weights_thresh: Union[int, float, None] = 0.1,
+        conv_output: Union[np.array, torch.Tensor],
+        image: torch.Tensor,
+        device: torch.device,
+        weights_thresh: Union[int, float, None] = 0.1,
 ):
     """
     Generate feature activation masks for an image.
@@ -42,108 +42,43 @@ def generate_feature_activation_masks(
         weights_thresh: the threshold to apply to the convolutional output to create the mask
         device: Cuda device to use.
 
-    Returns:
-
+    Yields:
+       A tuple of the feature activation mask and the image feature
     """
     # Apply the weight threshold to the convolutional output
-    feature_activation_masks = conv_output
-    feature_activation_masks = feature_activation_masks > weights_thresh
-    feature_activation_masks = feature_activation_masks.type(torch.FloatTensor).to(
-        device
-    )
+    mask_w = conv_output
+    mask_w = mask_w > weights_thresh
+    mask_w = mask_w.type(torch.FloatTensor).to(device)
 
     # Resize the mask to the same size as the input image
     resize = nn.Upsample(tuple(image.shape[-2:]), mode="bilinear", align_corners=False)
-    feature_activation_masks = resize(feature_activation_masks)
+    mask_w = resize(mask_w)
 
     # Batch, Filters, Channels, Width, Height
-    image = image.reshape(
-        (image.shape[0], 1, image.shape[1], image.shape[2], image.shape[3])
-    )
-    feature_activation_masks = feature_activation_masks.reshape(
-        (
-            feature_activation_masks.shape[0],
-            feature_activation_masks.shape[1],
-            1,
-            feature_activation_masks.shape[2],
-            feature_activation_masks.shape[3],
-        )
-    )
-    image = image.repeat((1, feature_activation_masks.shape[1], 1, 1, 1))
-    feature_activation_masks = feature_activation_masks.repeat(
-        (1, 1, image.shape[2], 1, 1)
-    )
-
-    feature_activation_masks = feature_activation_masks.to(device)
-
-    image_features = image * feature_activation_masks
-
-    return feature_activation_masks, image_features
+    for i in range(image.shape[1]):
+        for j in range(mask_w.shape[1]):
+            yield mask_w[0:1, j : j + 1, :, :], (
+                    image[0:1, :, :, :] * mask_w[0:1, j : j + 1, :, :]
+            )
 
 
-def similarity_difference(
-    model, org_img, feature_activation_masks, sigma, device: torch.device
-):
-    """
-
-    Args:
-        model:
-        org_img:
-        feature_activation_masks:
-        sigma:
-
-    Returns:
-
-    """
-    p_org = model(org_img)
-    pred_diffs = []
-    for fam in torch.squeeze(feature_activation_masks):
-        prediction = model(torch.unsqueeze(fam, 0))
-        pred_diffs.append(p_org - prediction)
-
-    pred_diffs = torch.stack(pred_diffs)
-    similarity_diff = torch.norm(pred_diffs, dim=2)
-    similarity_diff = torch.exp((-1 / (2 * (sigma ** 2))) * similarity_diff)
-
-    return similarity_diff.to(device)
+def kernel(vector: torch.Tensor, kernel_width: float = 0.25) -> torch.Tensor:
+    """computing the exponential weights for the differences"""
+    return torch.sqrt(torch.exp(-(vector ** 2) / kernel_width ** 2))
 
 
-def uniqueness(
-    model,
-    feature_activation_masks,
-    device: torch.device,
-):
-    """Calculate the uniqueness of the feature activation masks.
-
-    Args:
-        model:
-        feature_activation_masks:
-
-    Returns:
-
-    """
-    predictions = [
-        model(torch.unsqueeze(fam, 0))
-        for fam in torch.squeeze(feature_activation_masks)
-    ]
-    uniqueness_score = []
-
-    for i in range(len(predictions)):
-        i_uniq = 0
-        for j in range(len(predictions)):
-            if i != j:
-                i_uniq += torch.norm(predictions[i] - predictions[j])
-        uniqueness_score.append(i_uniq)
-
-    return torch.Tensor(uniqueness_score).to(device)
+def normalize(array):
+    return (array - array.min()) / (array.max() - array.min() + 1e-13)
 
 
 def sidu(
-    model: torch.nn.Module,
-    layer_output,
-    image: Union[np.ndarray, torch.Tensor],
-    device: torch.device,
-):
+        model: torch.nn.Module,
+        layer_output,
+        image: Union[np.ndarray, torch.Tensor],
+        device: torch.device = None,
+        cls_id: int = None,
+        paper: bool = False,
+) -> torch.Tensor:
     """
     Computes the SIDU feature map of an image given a pre-trained PyTorch model.
 
@@ -154,6 +89,10 @@ def sidu(
                                                 input image.
         device (torch.device, optional): The device to use for computations. If None, defaults to
                                         "cuda" if available, else "cpu".
+        cls_id (int, optional): The class to compute the feature map for. If None, defaults to the
+                            class with the highest probability.
+        paper (bool, optional): If True, the paper implementation is used. If False, the tensorflow
+                                implementation is used. Defaults to False.
 
     Returns:
         A PyTorch tensor representing the SIDU feature map of the input image.
@@ -168,34 +107,60 @@ def sidu(
         activations (as measured by the U score), to generate a weighted sum of feature activation
         maps that captures the most semantically relevant features for a given input image.
     """
-    feature_activation_masks, image_features = generate_feature_activation_masks(
-        layer_output, image, device
-    )
+    if device is None:
+        device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    sd_score = similarity_difference(
-        model, image, image_features, sigma=0.25, device=device
-    )
-    u_score = uniqueness(model, image_features, device)
+    with torch.no_grad():
+        image = image.to(device)
+        predictions = []
+        sd_score = []
 
-    weights = [(sd_i * u_i) for sd_i, u_i in zip(sd_score, u_score)]
-    weighted_fams = [
-        fam * w for fam, w in zip(torch.squeeze(feature_activation_masks), weights)
-    ]
-    weighted_fams_tensor = torch.stack(weighted_fams)
+        p_org: torch.Tensor = model(image).detach()
+        if cls_id is None:
+            cls_id = torch.argmax(torch.squeeze(p_org))
 
-    explanation = torch.sum(weighted_fams_tensor, axis=0)
+        for feature_activation_mask, image_feature in generate_feature_activation_masks(
+                layer_output, image, device=device
+        ):
+            pred = model(image_feature).detach()
+            sd_score.append(torch.abs(torch.squeeze(p_org - pred)[cls_id]))
 
-    return explanation
+            predictions.append(pred)
+        sd_score = torch.stack(sd_score).reshape((-1))
+
+        if paper:
+            sd_score = torch.exp((-sd_score / (2 * (0.25 ** 2))))
+        else:
+            sd_score = kernel(sd_score)
+        sd_score = normalize(sd_score)
+
+        predictions = torch.stack(predictions)[:, 0, cls_id].to(device)
+        u_score = torch.sum(predictions - predictions[:, None], dim=-1)
+        u_score = normalize(u_score)
+
+        weights = sd_score * u_score
+
+        weighted_fams_tensor = torch.zeros_like(feature_activation_mask)
+
+        for w, (fam, _) in zip(
+                weights,
+                generate_feature_activation_masks(layer_output, image, device=device),
+        ):
+            weighted_fams_tensor += (fam * w).detach()
+        sal_map = weighted_fams_tensor / len(weights) / 0.5  # extret d'implementació TF
+
+    return sal_map
 
 
 def sidu_wrapper(
-    net: torch.nn.Module,
-    layer,
-    image: Union[np.array, torch.Tensor],
-    device: torch.device = None,
+        net: torch.nn.Module,
+        layer,
+        image: Union[np.array, torch.Tensor],
+        device: torch.device = None,
 ):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
+
     activation = {}
 
     def hook(model, input, output):
@@ -204,4 +169,4 @@ def sidu_wrapper(
     layer.register_forward_hook(hook)
     _ = net(image)
 
-    return sidu(net, activation["layer"], image, device).cpu().detach().numpy()
+    return sidu(net, activation["layer"], image, device=device).cpu().detach().numpy()
