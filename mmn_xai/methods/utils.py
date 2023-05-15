@@ -25,7 +25,7 @@ def normalize(expl: np.ndarray) -> np.ndarray:
 
 
 def densify(
-    expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
+        expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
 ) -> np.ndarray:
     """Densify the explanation by aggregating the explanation values of the pixels belonging to
     the same object.
@@ -79,3 +79,16 @@ def densify(
         dense_expl[dense_expl != 0] = dense_expl[dense_expl != 0] / np.max(dense_expl)
 
     return dense_expl
+
+
+def get_activation(image, layer, model):
+    activation = {}
+
+    def hook(model, input, output):
+        activation["layer"] = output.detach()
+
+    layer.register_forward_hook(hook)
+    _ = model(image)
+    layer_output = activation["layer"]
+
+    return layer_output.detach()
