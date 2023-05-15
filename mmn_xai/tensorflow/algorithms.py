@@ -124,7 +124,7 @@ def print_bboxes(bboxes: List[np.array], shape: Tuple[int, int]) -> np.array:
     """
     bboxes_img = np.zeros(shape)
     for idx, bb in enumerate(bboxes):
-        bboxes_img[bb[0] : bb[2], bb[1] : bb[3]] = idx + 1
+        bboxes_img[bb[0]: bb[2], bb[1]: bb[3]] = idx + 1
 
     return bboxes_img
 

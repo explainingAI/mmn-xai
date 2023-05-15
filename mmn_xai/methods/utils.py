@@ -84,3 +84,16 @@ def densify(
         dense_expl[dense_expl != 0] = dense_expl[dense_expl != 0] / np.max(dense_expl)
 
     return dense_expl
+
+
+def get_activation(image, layer, model):
+    activation = {}
+
+    def hook(model, input, output):
+        activation["layer"] = output.detach()
+
+    layer.register_forward_hook(hook)
+    _ = model(image)
+    layer_output = activation["layer"]
+
+    return layer_output.detach()

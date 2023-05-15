@@ -28,10 +28,10 @@ from torch import nn
 
 
 def generate_feature_activation_masks(
-        conv_output: Union[np.array, torch.Tensor],
-        image: torch.Tensor,
-        device: torch.device,
-        weights_thresh: Union[int, float, None] = 0.1,
+    conv_output: Union[np.array, torch.Tensor],
+    image: torch.Tensor,
+    device: torch.device,
+    weights_thresh: Union[int, float, None] = 0.1,
 ):
     """
     Generate feature activation masks for an image.
@@ -57,8 +57,8 @@ def generate_feature_activation_masks(
     # Batch, Filters, Channels, Width, Height
     for i in range(image.shape[1]):
         for j in range(mask_w.shape[1]):
-            yield mask_w[0:1, j : j + 1, :, :], (
-                    image[0:1, :, :, :] * mask_w[0:1, j : j + 1, :, :]
+            yield mask_w[0:1, j: j + 1, :, :], (
+                image[0:1, :, :, :] * mask_w[0:1, j: j + 1, :, :]
             )
 
 
@@ -72,12 +72,12 @@ def normalize(array):
 
 
 def sidu(
-        model: torch.nn.Module,
-        layer_output,
-        image: Union[np.ndarray, torch.Tensor],
-        device: torch.device = None,
-        cls_id: int = None,
-        paper: bool = False,
+    model: torch.nn.Module,
+    layer_output,
+    image: Union[np.ndarray, torch.Tensor],
+    device: torch.device = None,
+    cls_id: int = None,
+    paper: bool = False,
 ) -> torch.Tensor:
     """
     Computes the SIDU feature map of an image given a pre-trained PyTorch model.
@@ -120,7 +120,7 @@ def sidu(
             cls_id = torch.argmax(torch.squeeze(p_org))
 
         for feature_activation_mask, image_feature in generate_feature_activation_masks(
-                layer_output, image, device=device
+            layer_output, image, device=device
         ):
             pred = model(image_feature).detach()
             sd_score.append(torch.abs(torch.squeeze(p_org - pred)[cls_id]))
@@ -143,8 +143,8 @@ def sidu(
         weighted_fams_tensor = torch.zeros_like(feature_activation_mask)
 
         for w, (fam, _) in zip(
-                weights,
-                generate_feature_activation_masks(layer_output, image, device=device),
+            weights,
+            generate_feature_activation_masks(layer_output, image, device=device),
         ):
             weighted_fams_tensor += (fam * w).detach()
         sal_map = weighted_fams_tensor / len(weights) / 0.5  # extret d'implementació TF
@@ -153,10 +153,10 @@ def sidu(
 
 
 def sidu_wrapper(
-        net: torch.nn.Module,
-        layer,
-        image: Union[np.array, torch.Tensor],
-        device: torch.device = None,
+    net: torch.nn.Module,
+    layer,
+    image: Union[np.array, torch.Tensor],
+    device: torch.device = None,
 ):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"

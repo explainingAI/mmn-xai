@@ -16,7 +16,7 @@ from torch import nn
 
 
 class GeneralizedOdin(nn.Module):
-    """ Pytorch implementation of G-ODIN
+    """Pytorch implementation of G-ODIN
 
     Args:
         input_size: Size of the input, number of channels of the feature map.
@@ -31,7 +31,9 @@ class GeneralizedOdin(nn.Module):
         self.relu1 = nn.ReLU()
         self.avg_pool2d = nn.AvgPool2d(8)
 
-        self.global_avg_pool2d = nn.AdaptiveAvgPool2d((1, 1))  # sortida igual a (1,1) == global avg
+        self.global_avg_pool2d = nn.AdaptiveAvgPool2d(
+            (1, 1)
+        )  # sortida igual a (1,1) == global avg
 
         self.h = nn.Linear(in_features=1, out_features=output_size)
 
@@ -57,7 +59,7 @@ class GeneralizedOdin(nn.Module):
 
 
 def tf_godin(x, n_classes=10, weight_decay: float = 0.0005):
-    """ Tensorflow classifier
+    """Tensorflow classifier
 
     Args:
         x: input into the classifier

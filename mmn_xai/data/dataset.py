@@ -23,7 +23,7 @@ class ComplexDataset(Dataset):
     def __getitem__(self, index: Optional[int]) -> T_co:
         dataset = self.__internal_datasets[
             self.__last_dataset + 1 % len(self.__internal_datasets)
-        ]
+            ]
 
         self.__last_dataset = (self.__last_dataset + 1) % len(self.__internal_datasets)
 
@@ -45,11 +45,11 @@ class ImageDataset(Dataset):
     """
 
     def __init__(
-        self,
-        file_names: List[str],
-        get_img_fn: Callable,
-        one_hot_encoding: int = -1,
-        removed_classes: Optional[List[str]] = None,
+            self,
+            file_names: List[str],
+            get_img_fn: Callable,
+            one_hot_encoding: int = -1,
+            removed_classes: Optional[List[str]] = None,
     ):
         if one_hot_encoding > 1:
             raise ValueError("Selected option for one hot encoding not valid")
@@ -59,7 +59,7 @@ class ImageDataset(Dataset):
         )
 
         self.__get_img_fn = get_img_fn
-        self.__labels_map = dict()
+        self.__labels_map = {}
 
         unique_labels = np.unique(labels)
 
@@ -74,7 +74,6 @@ class ImageDataset(Dataset):
 
         self.__file_names = file_names
         self.__labels = list(map(lambda x: self.__labels_map[x], labels))
-        self.__is_train_set = is_train_set
 
         self.__one_hot_encoding = one_hot_encoding
 
@@ -106,11 +105,13 @@ class ImageDataset(Dataset):
         Returns:
 
         """
-        if type(value) == str:
+        if not (isinstance(value, str) or isinstance(value, int)):
+            raise ValueError(f"Value {value} not present in this dataset")
+
+        if isinstance(value, str):
             return self.__labels_map[value]
-        elif type(value) == int:
+
+        if isinstance(value, int):
             for key, val in self.__labels_map.items():
                 if val == value:
                     return key
-        else:
-            raise ValueError(f"Value {value} not present in this dataset")
