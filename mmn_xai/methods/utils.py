@@ -29,7 +29,7 @@ def normalize(expl: np.ndarray) -> np.ndarray:
     return expl
 
 
-def densify(
+def __densify(
     expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
 ) -> np.ndarray:
     """Densify the explanation by aggregating the explanation values of the pixels belonging to
@@ -97,3 +97,64 @@ def get_activation(image, layer, model):
     layer_output = activation["layer"]
 
     return layer_output.detach()
+
+
+from numpy.lib.stride_tricks import as_strided
+
+
+def pool2d(data: np.ndarray, kernel_size: int, stride: int, padding: int = 0):
+    """Method that applies the pooling operation over an image.
+
+    Args:
+        data:
+        kernel_size:
+        stride:
+        padding:
+
+    Returns:
+
+    """
+    data = np.pad(data, padding, mode="constant")
+
+    output_shape = (
+        (data.shape[0] - kernel_size) // stride + 1,
+        (data.shape[1] - kernel_size) // stride + 1,
+    )
+
+    shape_w = (output_shape[0], output_shape[1], kernel_size, kernel_size)
+    strides_w = (
+        stride * data.strides[0],
+        stride * data.strides[1],
+        data.strides[0],
+        data.strides[1],
+    )
+
+    result = as_strided(data, shape_w, strides_w)
+
+    return result.max(axis=(2, 3))
+
+
+def smooth(img: np.ndarray):
+    """Applies to an image the max pooling 2D.
+
+    Args:
+        img: Numpy array with the image to smooth.
+
+    Returns:
+        Numpy array with the smoothed image.
+    """
+    return [
+        pool2d(np.abs(img[i, :, :]), kernel_size=5, stride=1, padding=2)
+        for i in range(img.shape[0])
+    ]
+
+
+def densify(expl, img: torch.Tensor, func: callable):
+    results = []
+
+    for i in range(expl.shape[0]):
+        expl = __densify(expl, img[i, 0, :, :].detach().cpu().numpy(), func, False)
+
+        results.append(expl)
+
+    return results

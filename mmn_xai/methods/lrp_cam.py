@@ -11,9 +11,8 @@ from . import utils
 
 
 class LrpCam:
-    """ XAI method that combines LRP and CAM approaches.
+    """XAI method that combines LRP and CAM approaches."""
 
-    """
     def __init__(self, model, sub_model):
         self.__model = model
         self.__sub_model = sub_model

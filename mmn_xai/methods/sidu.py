@@ -57,8 +57,8 @@ def generate_feature_activation_masks(
     # Batch, Filters, Channels, Width, Height
     for i in range(image.shape[1]):
         for j in range(mask_w.shape[1]):
-            yield mask_w[0:1, j: j + 1, :, :], (
-                image[0:1, :, :, :] * mask_w[0:1, j: j + 1, :, :]
+            yield mask_w[0:1, j : j + 1, :, :], (
+                image[0:1, :, :, :] * mask_w[0:1, j : j + 1, :, :]
             )
 
 
@@ -123,8 +123,12 @@ def sidu(
             layer_output, image, device=device
         ):
             pred = model(image_feature).detach()
-            sd_score.append(torch.abs(torch.squeeze(p_org - pred)[cls_id]))
+            sds = torch.abs(torch.squeeze(p_org - pred))
 
+            if len(sds.shape) > 0:
+                sds = sds[cls_id]
+
+            sd_score.append(sds)
             predictions.append(pred)
         sd_score = torch.stack(sd_score).reshape((-1))
 
@@ -157,6 +161,8 @@ def sidu_wrapper(
     layer,
     image: Union[np.array, torch.Tensor],
     device: torch.device = None,
+    *args,
+    **kwargs
 ):
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"

@@ -1,5 +1,3 @@
-# flake8: noqa
-# pylint: skip-file
 """ Module containing the implementation of the GODIN method.
 
 This module contains two implementation of GODIN method. The first one is a PyTorch implementation
@@ -11,10 +9,11 @@ References:
 Written by: Miquel Miró Nicolau (UIB), 2023
 """
 import tensorflow as tf
+from torch import nn
 import torch
+
 from tensorflow.keras import layers as tf_layers
 from tensorflow.keras.regularizers import l2
-from torch import nn
 
 
 class GeneralizedOdin(nn.Module):
@@ -89,3 +88,38 @@ def tf_godin(x, n_classes=10, weight_decay: float = 0.0005):
     outputs = tf.math.divide(h, g)
 
     return outputs
+
+
+class OODMOdule(nn.Module):
+    """ Pytorch implementation of the OODNet
+
+    """
+    def __init__(self, classes, in_features, do_sigmoid: bool = False):
+        super().__init__()
+
+        self.h = nn.Linear(in_features=in_features, out_features=classes, bias=False)
+        self.g_fc = nn.Linear(in_features=in_features, out_features=1)
+        self.g_bn = nn.BatchNorm1d(1)
+        self.g_sigmoid = nn.Sigmoid()
+
+        self.end_sigmoid = None
+
+        if do_sigmoid:
+            if classes > 1:
+                self.end_sigmoid = nn.Softmax()
+            else:
+                self.end_sigmoid = nn.Sigmoid()
+
+    def __call__(self, x, *args, **kwargs):
+        h = self.h(x)
+
+        g = self.g_fc(x)
+        g = self.g_bn(g)
+        g = torch.square(g)
+        g = self.g_sigmoid(g)
+        x = h / g
+
+        if self.end_sigmoid is not None:
+            x = self.end_sigmoid(x)
+
+        return x, h, g

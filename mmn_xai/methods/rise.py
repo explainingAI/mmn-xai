@@ -35,7 +35,7 @@ class RISE(nn.Module):
             # Linear upsampling and cropping
             self.masks[i, :, :] = resize(
                 grid[i], up_size, order=1, mode="reflect", anti_aliasing=False
-            )[x: x + self.input_size[0], y: y + self.input_size[1]]
+            )[x : x + self.input_size[0], y : y + self.input_size[1]]
         self.masks = self.masks.reshape(-1, 1, *self.input_size)
         np.save(savepath, self.masks)
         self.masks = torch.from_numpy(self.masks).float()
@@ -57,7 +57,7 @@ class RISE(nn.Module):
         # p = nn.Softmax(dim=1)(model(stack)) processed in batches
         p = []
         for i in range(0, N, self.gpu_batch):
-            p.append(self.model(stack[i: min(i + self.gpu_batch, N)]).detach())
+            p.append(self.model(stack[i : min(i + self.gpu_batch, N)]).detach())
         p = torch.cat(p)
         # Number of classes
         CL = p.size(1)
@@ -79,13 +79,14 @@ class RISEBatch(RISE):
         # p = nn.Softmax(dim=1)(model(stack)) in batches
         p = []
         for i in range(0, N * B, self.gpu_batch):
-            p.append(self.model(stack[i: min(i + self.gpu_batch, N * B)]))
+            p.append(self.model(stack[i : min(i + self.gpu_batch, N * B)]))
         p = torch.cat(p)
         CL = p.size(1)
         p = p.view(N, B, CL)
         sal = torch.matmul(p.permute(1, 2, 0), self.masks.view(N, H * W))
         sal = sal.view(B, CL, H, W)
         return sal
+
 
 # To process in batches
 # def explain_all_batch(data_loader, explainer):

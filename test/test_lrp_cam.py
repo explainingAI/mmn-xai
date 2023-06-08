@@ -6,7 +6,7 @@ import unittest
 
 import torch
 
-from mmn_xai.methods import lrp_cam
+from mmn_xai.xai import lrp_cam
 
 
 class TestModel(unittest.TestCase):

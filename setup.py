@@ -12,7 +12,7 @@ with open("requirements.txt") as fp:
 
 setup(
     name="mmn_xai",
-    version="0.10",
+    version="0.11",
     description="XAI utilities",
     url="https://github.com/explainingAI/uib-xai",
     author="Miquel Miró Nicolau, Dr. Gabriel Moyà Alcover",

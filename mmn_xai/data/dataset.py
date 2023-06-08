@@ -23,7 +23,7 @@ class ComplexDataset(Dataset):
     def __getitem__(self, index: Optional[int]) -> T_co:
         dataset = self.__internal_datasets[
             self.__last_dataset + 1 % len(self.__internal_datasets)
-            ]
+        ]
 
         self.__last_dataset = (self.__last_dataset + 1) % len(self.__internal_datasets)
 
@@ -45,11 +45,11 @@ class ImageDataset(Dataset):
     """
 
     def __init__(
-            self,
-            file_names: List[str],
-            get_img_fn: Callable,
-            one_hot_encoding: int = -1,
-            removed_classes: Optional[List[str]] = None,
+        self,
+        file_names: List[str],
+        get_img_fn: Callable,
+        one_hot_encoding: int = -1,
+        removed_classes: Optional[List[str]] = None,
     ):
         if one_hot_encoding > 1:
             raise ValueError("Selected option for one hot encoding not valid")

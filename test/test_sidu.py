@@ -10,7 +10,7 @@ import torch
 import torch.nn as nn
 from torchvision import models
 
-from mmn_xai.methods import sidu
+from mmn_xai.xai import sidu
 
 
 class Layer:

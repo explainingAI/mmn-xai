@@ -2,7 +2,7 @@ import unittest
 
 import numpy as np
 
-from mmn_xai.methods import utils
+from mmn_xai.xai import utils
 
 
 class TestDensify(unittest.TestCase):
