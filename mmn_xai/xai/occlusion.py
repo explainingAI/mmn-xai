@@ -1,3 +1,14 @@
+""" Module to instantiate the occlusion methods.
+
+This module contains the methods to instantiate the occlusion methods. The methods are stored in a
+dictionary with the name of the method as key and the function to explain the image as value.
+Within this category we have the following methods:
+    - RISE
+    - SIDU
+    - LIME
+
+Written by: Miquel Miró Nicolau (2023), UIB. From Rouen, France.
+"""
 from typing import Union
 
 from lime.lime_image import LimeImageExplainer
@@ -42,6 +53,17 @@ def __occlusion_expl(
 
 
 def instantiate(net, device, layer, mask_path: str = "masks.npy"):
+    """ Instantiate the occlusion methods.
+
+    Args:
+        net:
+        device:
+        layer:
+        mask_path:
+
+    Returns:
+
+    """
     explainer_rise = rise.RISE(net, (128, 128), device=device).to(device)
     explainer_rise.generate_masks(N=6000, s=8, p1=0.1, savepath=mask_path)
 

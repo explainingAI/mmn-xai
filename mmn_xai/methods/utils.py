@@ -29,7 +29,7 @@ def normalize(expl: np.ndarray) -> np.ndarray:
     return expl
 
 
-def __densify(
+def raw_densify(
     expl: np.ndarray, image: np.ndarray, agg_func: Callable, norm: bool = True
 ) -> np.ndarray:
     """Densify the explanation by aggregating the explanation values of the pixels belonging to
@@ -149,11 +149,11 @@ def smooth(img: np.ndarray):
     ]
 
 
-def densify(expl, img: torch.Tensor, func: callable):
+def densify(expl, img: torch.Tensor, func: callable, *args, **kwargs):
     results = []
 
     for i in range(expl.shape[0]):
-        expl = __densify(expl, img[i, 0, :, :].detach().cpu().numpy(), func, False)
+        expl = raw_densify(expl, img[i, 0, :, :].detach().cpu().numpy(), func, False)
 
         results.append(expl)
 

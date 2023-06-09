@@ -6,6 +6,7 @@ with the name of the method as key and the function to explain the image as valu
 Written by: Miquel Miró-Nicolau (2023), UIB.
 """
 from captum import attr
+from torch import nn
 
 from mmn_xai.methods import utils
 from mmn_xai.methods import w_smooth_grad as wsg
@@ -20,7 +21,13 @@ def instantiate(net, device):
     gbp = attr.GuidedBackprop(net)
     deep_lift = attr.DeepLift(net)
     smooth_grad = attr.NoiseTunnel(sal)
-    wsg_inst = wsg.WeightedSmoothGrad(net, device=device)
+
+    cos = nn.CosineSimilarity(dim=1, eps=1e-6)
+    wsg_inst = wsg.WeightedSmoothGrad(
+        net,
+        device=device,
+        distance=lambda x, y: abs(cos(x, y)).mean()
+    )
 
     methods = {
         "lrp": lambda x: abs(

@@ -2,6 +2,8 @@
 
 Ref: https://github.com/pkmr06/pytorch-smoothgrad/blob/master/lib/gradients.py
 """
+from typing import Callable, Optional
+
 import torch
 from torch import nn
 from torch.autograd import Variable
@@ -10,6 +12,11 @@ import numpy as np
 
 
 class WeightedSmoothGrad:
+    """ Weighted SmoothGrad.
+
+    New method based on the SmoothGrad method. It adds a weight to the gradients when combining
+    them.
+    """
     def __init__(
         self,
         pretrained_model,
@@ -18,6 +25,7 @@ class WeightedSmoothGrad:
         n_samples=25,
         magnitude=True,
         add_softmax: bool = False,
+        distance: Optional[Callable] = None
     ):
         self.pretrained_model = pretrained_model
         self.device = device
@@ -25,6 +33,10 @@ class WeightedSmoothGrad:
         self.n_samples = n_samples
         self.magnitude = magnitude
         self.add_softmax = add_softmax
+
+        if distance is None:
+            distance = lambda x, y: 1 - min(abs((x - y).pow(2).sum().sqrt()), 1)
+        self.distance = distance
 
     def gradient(self, image, index=None):
         if isinstance(image, np.ndarray):
@@ -69,7 +81,7 @@ class WeightedSmoothGrad:
             if self.add_softmax:
                 output = nn.functional.softmax(output)
 
-            dist = 1 - min(abs((org_output - output).pow(2).sum().sqrt()), 1)
+            dist = self.distance(org_output, output)
             if isinstance(dist, torch.Tensor):
                 dist = dist.detach().cpu().numpy()
 

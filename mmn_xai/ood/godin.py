@@ -8,12 +8,8 @@ References:
 
 Written by: Miquel Miró Nicolau (UIB), 2023
 """
-import tensorflow as tf
-from torch import nn
 import torch
-
-from tensorflow.keras import layers as tf_layers
-from tensorflow.keras.regularizers import l2
+from torch import nn
 
 
 class GeneralizedOdin(nn.Module):
@@ -59,41 +55,11 @@ class GeneralizedOdin(nn.Module):
         return out
 
 
-def tf_godin(x, n_classes=10, weight_decay: float = 0.0005):
-    """Tensorflow classifier
-
-    Args:
-        x: input into the classifier
-        n_classes: number of classes
-        weight_decay:
-
-    Returns:
-        The output of GODIN
-    """
-    # Pool the feature maps after the end of all the residual blocks
-    x = tf_layers.BatchNormalization()(x)
-    x = tf_layers.ReLU()(x)
-    x = tf_layers.AveragePooling2D(pool_size=8)(x)
-
-    # Flatten into 1D vector
-    x = tf_layers.GlobalAvgPool2D()(x)
-
-    # Define the ODIN as specified in Section 3.1.1 of
-    # https://arxiv.org/abs/2002.11297
-    h = tf_layers.Dense(n_classes, kernel_initializer="he_normal")(x)
-
-    g = tf_layers.Dense(1, kernel_regularizer=l2(weight_decay))(x)
-    g = tf_layers.BatchNormalization()(g)
-    g = tf_layers.Activation("sigmoid")(g)
-    outputs = tf.math.divide(h, g)
-
-    return outputs
-
-
-class OODMOdule(nn.Module):
+class OODModule(nn.Module):
     """ Pytorch implementation of the OODNet
 
     """
+
     def __init__(self, classes, in_features, do_sigmoid: bool = False):
         super().__init__()
 
