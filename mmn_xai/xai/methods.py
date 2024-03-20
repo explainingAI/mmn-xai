@@ -18,8 +18,12 @@ def instantiate(
     do_cam: bool = True,
     do_grad: bool = True,
     do_occlusion: bool = True,
+    multi_channel: bool = False,
+    rise_size: tuple = (128, 128),
+    rise_n: int = 6000,
+    batch_size: int = None,
 ):
-    """ instantiate all models.
+    """instantiate all models.
 
     Args:
         net: Pytorch model
@@ -33,7 +37,6 @@ def instantiate(
     Returns:
         Dictionary name-> method
     """
-    cuda_available = torch.cuda.is_available()
     net = net.to(device)
 
     if layer is None:
@@ -42,7 +45,7 @@ def instantiate(
     methods = {}
 
     if do_cam:
-        cam_methods = cam.instantiate(net, device, layer, cuda_available)
+        cam_methods = cam.instantiate(net, device, layer, torch.cuda.is_available(), multi_channel)
         methods = {**methods, **cam_methods}
 
     if do_grad:
@@ -50,7 +53,14 @@ def instantiate(
         methods = {**methods, **grad_methods}
 
     if do_occlusion:
-        occl_methods = occlusion.instantiate(net, device, sidu_layer)
+        occl_methods = occlusion.instantiate(
+            net,
+            device,
+            sidu_layer,
+            rise_size=rise_size,
+            rise_n=rise_n,
+            batch_size=batch_size,
+        )
         methods = {**methods, **occl_methods}
 
     return methods

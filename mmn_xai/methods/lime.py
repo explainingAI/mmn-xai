@@ -27,7 +27,7 @@ def swap_colors(pixels):
     return ret_val
 
 
-def batch_predict(image: np.array, network: Callable) -> np.array:
+def batch_predict(image: np.array, network: Callable, multi_channel: bool) -> np.array:
     """Function to predict the output of the network for a batch of images.
 
     Args:
@@ -41,8 +41,9 @@ def batch_predict(image: np.array, network: Callable) -> np.array:
 
     image = np.transpose(image, (0, 3, 1, 2))
 
-    logit = network(image[:, 0:1, :, :])
-    logit = logit.reshape((-1, 1))
+    if not multi_channel:
+        image = image[:, 0:1, :, :]
+    logit = network(image).reshape((-1, 1))
 
     return logit
 
@@ -130,6 +131,7 @@ def get_exp(
     hide_color_fn=None,
     segmentation_fn=None,
     num_samples: int = 1500,
+    batch_size: int = None,
 ):
     """Wrapper for the LIME method.
 
@@ -138,13 +140,16 @@ def get_exp(
         img: Numpy array containing the image to explain.
         net: Callable object,
         device: String with the device to use.
+        multi_channel: Boolean to indicate if the image has multiple channels.
         hide_color_fn: Function to perturb the image.
         segmentation_fn: Function to segment the image.
         num_samples: Integer, parameter of LIME method.
-
+        batch_size: Integer, batch size to use.
     Returns:
         Numpy array with the explanation.
     """
+    if batch_size is None:
+        batch_size = img.shape[0]
     lime_res = []
     explanation = explainer.explain_instance(
         img,
@@ -154,12 +159,13 @@ def get_exp(
             .detach()
             .cpu()
             .numpy(),
+            multi_channel=x.shape[1] > 1,
         ),
         top_labels=1,
         hide_color=hide_color_fn,
         num_samples=num_samples,
         segmentation_fn=segmentation_fn,
-        batch_size=img.shape[0],
+        batch_size=batch_size,
         random_seed=42,
         progress_bar=False,
     )

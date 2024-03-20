@@ -15,7 +15,7 @@ import torch
 
 
 def get_cam(img: np.ndarray, cam):
-    """ From a batch of images, get the saliency map for each image with a CAM method.
+    """From a batch of images, get the saliency map for each image with a CAM method.
 
     Args:
         img: Numpy array or torch tensor with the images to explain.
@@ -34,30 +34,44 @@ def get_cam(img: np.ndarray, cam):
     return result
 
 
-def instantiate(net, device, layer, cuda_available):
-    """ Instantiate the CAM methods.
+def instantiate(
+    net, device, layer, cuda_available, batch_size: int = 1, multi_channel: bool = False
+):
+    """Instantiate the CAM methods.
 
     Args:
-        net:
-        device:
-        layer:
-        cuda_available:
-
+        net: Pytorch model to explain.
+        device: String with the GPU device to use.
+        layer: Layer to use to explain the image.
+        cuda_available: Boolean to indicate if the GPU is available.
+        batch_size: Integer with the batch size to use.
+        multi_channel: Boolean to indicate if the image has multiple channels.
     Returns:
-
+        Dictionary with the CAM methods instantiated.
     """
     scam = py_cam.ScoreCAM(
         model=net,
         target_layers=layer,
-        use_cuda=cuda_available,
+        show_progress=False,
+        device=device,
+        batch_size=batch_size,
     )
-    gcam = py_cam.GradCAM(model=net, target_layers=layer, use_cuda=cuda_available)
+    gcam = py_cam.GradCAM(
+        model=net, target_layers=layer, use_cuda=cuda_available, device=device
+    )
     gcam_plus = py_cam.GradCAMPlusPlus(
-        model=net, target_layers=layer, use_cuda=cuda_available
+        model=net, target_layers=layer, use_cuda=cuda_available, device=device
     )
 
-    return {
-        "score_cam": lambda x: get_cam(x[:, 0:1, :, :], scam),
-        "grad_cam": lambda x: get_cam(x[:, 0:1, :, :], gcam),
-        "grad_cam_plus": lambda x: get_cam(x.to(device), gcam_plus),
-    }
+    if not multi_channel:
+        return {
+            "score_cam": lambda x: get_cam(x[:, 0:1, :, :], scam),
+            "grad_cam": lambda x: get_cam(x[:, 0:1, :, :], gcam),
+            "grad_cam_plus": lambda x: get_cam(x.to(device), gcam_plus),
+        }
+    else:
+        return {
+            "score_cam": lambda x: get_cam(x[:, :, :, :], scam),
+            "grad_cam": lambda x: get_cam(x[:, :, :, :], gcam),
+            "grad_cam_plus": lambda x: get_cam(x.to(device), gcam_plus),
+        }

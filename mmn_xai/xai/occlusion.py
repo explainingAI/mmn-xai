@@ -11,11 +11,35 @@ Written by: Miquel Miró Nicolau (2023), UIB. From Rouen, France.
 """
 from typing import Union
 
-from lime.lime_image import LimeImageExplainer
 import numpy as np
 import torch
+from captum import attr
+from lime.lime_image import LimeImageExplainer
 
 from mmn_xai.methods import lime, rise, sidu
+
+
+def zeiler_fn(net, data, sliding_window_shapes, device) -> np.ndarray:
+    """ Function to explain the image with the Zeiler et al. method.
+
+    Args:
+        net: Pytorch model to explain.
+        data: Image to explain.
+        sliding_window_shapes: Tuple with the sliding window shapes for the Zeiler et al. method.
+        device: String with the GPU device to use.
+
+    Returns:
+        Numpy array with the saliency map for the image passed as parameter.
+    """
+    zeiler = attr.Occlusion(net)
+    expl = __occlusion_expl(
+        lambda y: zeiler.attribute(
+            y, target=0, sliding_window_shapes=sliding_window_shapes
+        )[:, 0, :, :],
+        data,
+        device,
+    )
+    return expl
 
 
 def __occlusion_expl(
@@ -52,22 +76,43 @@ def __occlusion_expl(
     return abs(np.asarray(results))
 
 
-def instantiate(net, device, layer, mask_path: str = "masks.npy"):
-    """ Instantiate the occlusion methods.
+def instantiate(
+    net,
+    device,
+    layer,
+    batch_size: int,
+    rise_size: tuple = (128, 128),
+    rise_n: int = 6000,
+    mask_path: str = "masks.npy",
+    sliding_window_shapes: tuple = (1, 64, 64),
+):
+    """Instantiate the occlusion methods.
 
     Args:
-        net:
-        device:
-        layer:
-        mask_path:
+        net: Pytorch model to explain.
+        device: String with the GPU device to use.
+        layer: Layer to use to explain the image.
+        rise_size: Tuple with the size of the RISE mask.
+        rise_n: Integer with the number of RISE masks to generate.
+        mask_path: String with the path to save the RISE masks.
+        sliding_window_shapes: Tuple with the sliding window shapes for the Zeiler et al. method.
+        batch_size: Integer with the batch size to use.
 
     Returns:
-
+        Dictionary with the occlusion methods instantiated.
     """
-    explainer_rise = rise.RISE(net, (128, 128), device=device).to(device)
-    explainer_rise.generate_masks(N=6000, s=8, p1=0.1, savepath=mask_path)
+    explainer_rise = rise.RISE(net, rise_size, gpu_batch=batch_size, device=device).to(
+        device
+    )
+    explainer_rise.generate_masks(N=rise_n, s=8, p1=0.1, savepath=mask_path)
 
     return {
+        "zeiler": lambda x: zeiler_fn(
+            net,
+            x.to(device),
+            sliding_window_shapes=sliding_window_shapes,
+            device=device,
+        )[0],
         "rise": lambda x: __occlusion_expl(
             lambda y: explainer_rise(y)[0, :, :], x, device
         ),
@@ -80,6 +125,7 @@ def instantiate(net, device, layer, mask_path: str = "masks.npy"):
                 hide_color_fn=1,
                 segmentation_fn=None,
                 num_samples=1000,
+                batch_size=batch_size,
             )[0],
             x,
             device,
