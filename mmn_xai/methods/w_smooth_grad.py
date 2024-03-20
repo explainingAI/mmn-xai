@@ -12,21 +12,21 @@ from mmn_xai.methods import gradient_methods
 
 
 class WeightedSmoothGrad(gradient_methods.GradientMethod):
-    """ Weighted SmoothGrad.
+    """Weighted SmoothGrad.
 
     New method based on the SmoothGrad method. It adds a weight to the gradients when combining
     them.
     """
 
     def __init__(
-            self,
-            pretrained_model,
-            device="cpu",
-            st_dev_spread=0.15,
-            n_samples=25,
-            magnitude=True,
-            add_softmax: bool = False,
-            distance: Optional[Callable] = None
+        self,
+        pretrained_model,
+        device="cpu",
+        st_dev_spread=0.15,
+        n_samples=25,
+        magnitude=True,
+        add_softmax: bool = False,
+        distance: Optional[Callable] = None,
     ):
         super().__init__(pretrained_model, device, add_softmax)
 
@@ -35,7 +35,8 @@ class WeightedSmoothGrad(gradient_methods.GradientMethod):
         self.magnitude = magnitude
 
         if distance is None:
-            distance = lambda x, y: 1 - min(abs((x - y).pow(2).sum().sqrt()), 1)
+            # distance = lambda x, y: 1 - min(abs((x - y).pow(2).sum().sqrt()), 1)
+            distance = lambda x, y: nn.functional.cosine_similarity(x, y)
         self.distance = distance
 
     def __call__(self, x, index=None):
@@ -45,10 +46,12 @@ class WeightedSmoothGrad(gradient_methods.GradientMethod):
         if self.add_softmax:
             org_output = nn.functional.softmax(org_output)
 
+        total_gradients = torch.zeros_like(x)
+
         x = x.data.cpu().numpy()
         stdev = self.st_dev_spread * (np.max(x) - np.min(x))
 
-        total_gradients = np.zeros_like(x)
+        # total_gradients = np.zeros_like(x)
         for _ in range(self.n_samples):
             noise = np.random.normal(0, stdev, x.shape).astype(np.float32)
             x_plus_noise = x + noise
@@ -57,18 +60,22 @@ class WeightedSmoothGrad(gradient_methods.GradientMethod):
                 output = nn.functional.softmax(output)
 
             dist = self.distance(org_output, output)
-            if isinstance(dist, torch.Tensor):
-                dist = dist.detach().cpu().numpy()
+            # if isinstance(dist, torch.Tensor):
+            #     dist = dist.detach().cpu().numpy()
+
+            # Add the same amount of dimensions than grad to allow the product
+            aux = [-1] + ([1] * (len(grad.shape) - 1))
+            dist = dist.reshape(aux)
 
             grad = dist * grad
             if self.magnitude:
                 grad = grad * grad
 
-            if not np.isnan(grad).any():
+            if not torch.isnan(grad).any():
                 total_gradients += grad
 
-        avg_gradients = total_gradients[0, :, :, :] / float(self.n_samples)
-        if avg_gradients.max() != 0:
-            avg_gradients /= avg_gradients.max()
+        avg_gradients = total_gradients[:, :, :, :] / float(self.n_samples)
+        # if avg_gradients.max() != 0:
+        #     avg_gradients /= avg_gradients.max()
 
         return avg_gradients

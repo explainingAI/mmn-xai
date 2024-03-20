@@ -4,12 +4,10 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 
+
 class GradientMethod(abc.ABC):
     def __init__(
-            self,
-            pretrained_model: torch.Module,
-            device="cpu",
-            add_softmax: bool = False
+        self, pretrained_model: torch.nn.Module, device="cpu", add_softmax: bool = False
     ):
         self.pretrained_model = pretrained_model
         self.device = device
@@ -23,20 +21,23 @@ class GradientMethod(abc.ABC):
         output = self.pretrained_model(image)
 
         if index is None:
-            index = np.argmax(output.data.cpu().numpy())
+            index = torch.argmax(output.data, axis=1)
 
-        one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
-        one_hot[0][index] = 1
-        one_hot = Variable(
-            torch.from_numpy(one_hot).to(self.device), requires_grad=True
+        one_hot = torch.zeros(
+            (output.size()[0], output.size()[-1]), dtype=torch.float32
         )
+        for batch_idx, inter_index in enumerate(index):
+            one_hot[batch_idx][inter_index] = 1
+
+        one_hot = Variable(one_hot.to(self.device), requires_grad=True)
+        # Només ens quedam amb la sortida amb més gradient
         one_hot = torch.sum(one_hot * output)
 
         if image.grad is not None:
             image.grad.data.zero_()
         one_hot.backward(retain_graph=True)
 
-        grad = image.grad.data.cpu().numpy()
+        grad = image.grad.data
 
         return output, grad
 
