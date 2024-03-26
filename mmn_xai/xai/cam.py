@@ -27,7 +27,7 @@ def get_cam(img: np.ndarray, cam):
     result = []
 
     for i in range(img.shape[0]):
-        explanation = cam(input_tensor=img[i : i + 1, :, :, :])
+        explanation = cam(input_tensor=img[i: i + 1, :, :, :])
         result.append(explanation[0, :, :])
         torch.cuda.empty_cache()
 
@@ -35,7 +35,7 @@ def get_cam(img: np.ndarray, cam):
 
 
 def instantiate(
-    net, device, layer, cuda_available, batch_size: int = 1, multi_channel: bool = False
+        net, device, layer, cuda_available, batch_size: int = 1, multi_channel: bool = False
 ):
     """Instantiate the CAM methods.
 
@@ -63,15 +63,21 @@ def instantiate(
         model=net, target_layers=layer, use_cuda=cuda_available, device=device
     )
 
+    acam = py_cam.AblationCAM(
+        model=net, target_layers=layer, use_cuda=cuda_available, device=device
+    )
+
     if not multi_channel:
         return {
             "score_cam": lambda x: get_cam(x[:, 0:1, :, :], scam),
             "grad_cam": lambda x: get_cam(x[:, 0:1, :, :], gcam),
             "grad_cam_plus": lambda x: get_cam(x.to(device), gcam_plus),
+            "abblation_cam": lambda x: get_cam(x[:, 0:1, :, :], acam)
         }
     else:
         return {
             "score_cam": lambda x: get_cam(x[:, :, :, :], scam),
             "grad_cam": lambda x: get_cam(x[:, :, :, :], gcam),
             "grad_cam_plus": lambda x: get_cam(x.to(device), gcam_plus),
+            "abblation_cam": lambda x: get_cam(x[:, :, :, :], acam)
         }
