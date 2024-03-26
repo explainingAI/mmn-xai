@@ -19,24 +19,25 @@ class WeightedSmoothGrad(gradient_methods.GradientMethod):
     """
 
     def __init__(
-        self,
-        pretrained_model,
-        device="cpu",
-        st_dev_spread=0.15,
-        n_samples=25,
-        magnitude=True,
-        add_softmax: bool = False,
-        distance: Optional[Callable] = None,
+            self,
+            pretrained_model,
+            device="cpu",
+            st_dev_spread=0.15,
+            n_samples=25,
+            magnitude=True,
+            add_softmax: bool = False,
+            distance: Optional[Callable] = None,
+            pot=1
     ):
         super().__init__(pretrained_model, device, add_softmax)
 
         self.st_dev_spread = st_dev_spread
         self.n_samples = n_samples
         self.magnitude = magnitude
+        self.pot = pot
 
         if distance is None:
-            # distance = lambda x, y: 1 - min(abs((x - y).pow(2).sum().sqrt()), 1)
-            distance = lambda x, y: nn.functional.cosine_similarity(x, y)
+            distance = lambda x, y: nn.functional.cosine_similarity(x, y, dim=0)
         self.distance = distance
 
     def __call__(self, x, index=None):
@@ -46,12 +47,11 @@ class WeightedSmoothGrad(gradient_methods.GradientMethod):
         if self.add_softmax:
             org_output = nn.functional.softmax(org_output)
 
-        total_gradients = torch.zeros_like(x)
+        total_gradients = torch.zeros_like(x, device=self.device)
 
         x = x.data.cpu().numpy()
         stdev = self.st_dev_spread * (np.max(x) - np.min(x))
 
-        # total_gradients = np.zeros_like(x)
         for _ in range(self.n_samples):
             noise = np.random.normal(0, stdev, x.shape).astype(np.float32)
             x_plus_noise = x + noise
@@ -60,12 +60,10 @@ class WeightedSmoothGrad(gradient_methods.GradientMethod):
                 output = nn.functional.softmax(output)
 
             dist = self.distance(org_output, output)
-            # if isinstance(dist, torch.Tensor):
-            #     dist = dist.detach().cpu().numpy()
 
             # Add the same amount of dimensions than grad to allow the product
             aux = [-1] + ([1] * (len(grad.shape) - 1))
-            dist = dist.reshape(aux)
+            dist = dist.reshape(aux) ** self.pot
 
             grad = dist * grad
             if self.magnitude:
