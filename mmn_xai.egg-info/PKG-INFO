@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: mmn-xai
+Version: 0.9
+Summary: XAI utilities
+Home-page: https://github.com/explainingAI/uib-xai
+Author: Miquel Miró Nicolau, Dr. Gabriel Moyà Alcover
+Author-email: miquelca32@gmail.com, gabriel_moya@uib.es
+License: MIT
+Keywords: Deep Learning,Computer Vision,Explainable artificial intelligence
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+
+# MMN XAI
+## Library for XAI techniques
+
+#### Developed by Miquel Miró Nicolau (LAIA@UIB)

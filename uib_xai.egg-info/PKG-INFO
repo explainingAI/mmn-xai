@@ -1,0 +1,16 @@
+Metadata-Version: 2.1
+Name: uib-xai
+Version: 0.8
+Summary: XAI utilities
+Home-page: https://github.com/explainingAI/uib-xai
+Author: Miquel Miró Nicolau, Dr. Gabriel Moyà Alcover
+Author-email: miquelca32@gmail.com, gabriel_moya@uib.es
+License: MIT
+Description: # UIB XAI
+        ## Library for XAI techniques 
+        
+        #### Developed on the UIB
+Keywords: Deep Learning,Computer Vision,Explainable artificial intelligence
+Platform: UNKNOWN
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown

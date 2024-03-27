@@ -49,6 +49,7 @@ def instantiate(
     Returns:
         Dictionary with the CAM methods instantiated.
     """
+    print(batch_size)
     scam = py_cam.ScoreCAM(
         model=net,
         target_layers=layer,
