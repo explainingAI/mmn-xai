@@ -31,6 +31,7 @@ def instantiate(net, device, internal_batch_size=None):
     gbp = attr.GuidedBackprop(net)
     deep_lift = attr.DeepLift(net)
     smooth_grad = attr.NoiseTunnel(sal)
+    deconv = attr.Deconvolution(net)
 
     cos = nn.CosineSimilarity(dim=1, eps=1e-6)
     wsg_inst = wsg.WeightedSmoothGrad(
@@ -67,6 +68,9 @@ def instantiate(net, device, internal_batch_size=None):
                     nt_samples_batch_size=1,
                 )[:, 0, :, :]
             )
+        ),
+        "Deconvolution": lambda x: abs(
+            utils.to_numpy(deconv.attribute(x.to(device), target=0)[:, 0, :, :])
         ),
         "WeightedSmoothGrad": lambda x: abs(wsg_inst(x)),
     }
