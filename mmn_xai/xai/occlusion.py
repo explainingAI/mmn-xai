@@ -15,6 +15,7 @@ import numpy as np
 import torch
 from captum import attr
 from lime.lime_image import LimeImageExplainer
+from lime.wrappers.scikit_image import SegmentationAlgorithm
 
 from mmn_xai.methods import lime, rise, sidu
 
@@ -41,6 +42,23 @@ def zeiler_fn(net, data, sliding_window_shapes, device) -> np.ndarray:
     )
     return expl
 
+def shap_expl(net, data, device):
+    def segment_fn(image, device):
+        image = utils.to_numpy(image)
+        image = image[0, 0, :, :]
+        image = np.expand_dims(image, axis=-1)
+        color_image = cv2.merge((image, image, image))
+
+        segments = seg_alg(color_image)
+
+        return torch.tensor(segments).to(device)
+
+    ks = attr.KernelShap(net)
+    seg_alg = SegmentationAlgorithm('quickshift', kernel_size=4,
+                                    max_dist=200, ratio=0.2,
+                                    random_seed=42)
+
+    return ks.attribute(x.to(device), target=0, feature_mask=segment_fn(x, device))[:, 0, :, :]
 
 def __occlusion_expl(
     explainer, batch: Union[np.ndarray, torch.Tensor], device: str
@@ -130,5 +148,6 @@ def instantiate(
             x,
             device,
         ),
+        "shap": lambda x: abs(utils.to_numpy(shap_expl(net, x.to(device), device))),
         "sidu": lambda x: sidu.sidu_wrapper(net, layer, x.to(device), device)[0],
     }
